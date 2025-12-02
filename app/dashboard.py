@@ -560,7 +560,7 @@ with tab4:
     
     st.plotly_chart(fig, use_container_width=True)
 
-# TAB 5: ML Predictor
+# TAB 5: ML Predictor - FIXED VERSION
 with tab5:
     st.header("🤖 Machine Learning Drug Response Predictor")
     st.markdown("Predict IC50 values based on gene expression profiles")
@@ -568,6 +568,12 @@ with tab5:
     col_ml1, col_ml2 = st.columns([3, 1])
     
     with col_ml1:
+        # Initialize session state for gene values if not exists
+        if 'gene_values_initialized' not in st.session_state:
+            for i in range(15):
+                st.session_state[f"gene_{i}"] = 0.0
+            st.session_state.gene_values_initialized = True
+        
         # Create input sliders for gene features
         st.subheader("🧬 Input Gene Expression Features")
         
@@ -577,25 +583,33 @@ with tab5:
         
         for i in range(15):
             with cols[i % 5]:
+                # Get current value from session state
+                current_value = st.session_state[f"gene_{i}"]
+                
+                # Create slider with session state value
                 feature_value = st.slider(
                     f"Gene {i+1}", 
-                    -3.0, 3.0, 0.0, 0.1,
+                    -3.0, 3.0, 
+                    float(current_value), 0.1,
                     help=f"Expression level for synthetic gene {i+1}",
-                    key=f"gene_{i}"
+                    key=f"gene_slider_{i}"
                 )
                 features.append(feature_value)
         
-        # Prediction button
+        # Prediction and randomize buttons
         col_btn1, col_btn2 = st.columns(2)
+        
         with col_btn1:
             predict_btn = st.button("🎯 Predict Drug Response", type="primary", use_container_width=True)
+        
         with col_btn2:
             random_btn = st.button("🎲 Randomize Inputs", use_container_width=True)
             
             if random_btn:
+                # Update session state with random values
                 for i in range(15):
-                    st.session_state[f"gene_{i}"] = np.random.uniform(-3, 3)
-                st.rerun()
+                    st.session_state[f"gene_{i}"] = float(np.random.uniform(-3, 3))
+                st.rerun()  # This will rerun the app to update sliders
         
         if predict_btn:
             # Make prediction
@@ -603,7 +617,7 @@ with tab5:
             prediction = model.predict(X_input)[0]
             
             # Display prediction with animation
-            st.success(f"✅ *Prediction Complete!*")
+            st.success("✅ *Prediction Complete!*")
             
             # Create metrics display
             pred_col1, pred_col2, pred_col3 = st.columns(3)
