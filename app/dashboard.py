@@ -133,10 +133,11 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("#### 👨‍🔬 Developer")
-    st.markdown("*Name:* Freedom Evbakoe Amenaghawon")
-    st.markdown("*GitHub:* [@famenaghawon](https://github.com/famenaghawon)")
-    st.markdown("*ORCID:* [0009-0003-1457-809X](https://orcid.org/0009-0003-1457-809X)")
-    st.markdown("*Email:* amenaghawonfreedom1@gmail.com")
+    st.markdown("Name: Freedom Evbakoe Amenaghawon")
+    st.markdown("GitHub: [@famenaghawon](https://github.com/famenaghawon)")
+    st.markdown("ORCID: [0009-0003-1457-809X](https://orcid.org/0009-0003-1457-809X)")
+    st.markdown("Email: f.e.amenaghawon@gmail.com")
+    st.markdown("LinkedIn: [famenaghawon](https://www.linkedin.com/in/famenaghawon)")
 
 # ====================
 # DATA GENERATION
@@ -792,12 +793,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div style="text-align: center; margin-top: 2rem;">
-    <p><strong>Advanced Drug Response Prediction System v2.0</strong> • Developed by Freedom Evbakoe Amenaghawon</p>
-    <p>ORCID: 0009-0003-1457-809X • GitHub: @famenaghawon • Email: amenaghawonfreedom1@gmail.com</p>
-    <p style="color: #666; font-size: 0.9rem;">For research and educational purposes • Precision Oncology Pipeline</p>
-</div>
-""", unsafe_allow_html=True)
+    <div style="text-align: center; margin-top: 2rem;">
+        <p><strong>Advanced Drug Response Prediction System v2.0</strong> • Developed by Freedom Evbakoe Amenaghawon</p>
+        <p>ORCID: 0009-0003-1457-809X • GitHub: @famenaghawon • Email: f.e.amenaghawon@gmail.com • LinkedIn: famenaghawon</p>
+        <p style="color: #666; font-size: 0.9rem;">For research and educational purposes • Precision Oncology Pipeline</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ====================
 # DEPLOYMENT SECTION

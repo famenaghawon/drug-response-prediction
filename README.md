@@ -11,7 +11,7 @@
 ## 🎯 Project Overview
 
 <p align="center">
-  <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="120" alt="Precision Medicine">
+  <img src="https://cdn-icons-png.flaticon.com/512/2771/2771778.png" width="120" alt="Precision Medicine">
   <br>
   <em>A sophisticated computational biology dashboard for precision oncology</em>
 </p>
@@ -262,12 +262,12 @@ If you use this project in your research, please cite:
   <strong>Freedom Evbakoe Amenaghawon</strong>
   <br>
   <em>Computational Biologist & Data Scientist</em>
-</p>📞 Contact Information
-
-· GitHub: @blueprint-fx
-· ORCID: 0009-0003-1457-809X
-· Email: amenaghawonfreedom1@gmail.com
-· LinkedIn: LinkedIn Profile
+  
+### 📞 Contact Information
+- *GitHub*: [@famenaghawon](https://github.com/famenaghawon)
+- *ORCID*: [0009-0003-1457-809X](https://orcid.org/0009-0003-1457-809X)
+- *Email*: f.e.amenaghawon@gmail.com
+- *LinkedIn*: [famenaghawon](https://www.linkedin.com/in/famenaghawon)
 
 🏆 Certifications & Skills
 
