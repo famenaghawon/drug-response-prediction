@@ -137,7 +137,7 @@ with st.sidebar:
     st.markdown("GitHub: [@famenaghawon](https://github.com/famenaghawon)")
     st.markdown("ORCID: [0009-0003-1457-809X](https://orcid.org/0009-0003-1457-809X)")
     st.markdown("Email: f.e.amenaghawon@gmail.com")
-    st.markdown("LinkedIn: [famenaghawon](https://www.linkedin.com/in/famenaghawon)")
+    st.markdown("LinkedIn: [famenaghawon](https://www.linkedin.com/in/famenaghawon")
 
 # ====================
 # DATA GENERATION
@@ -843,3 +843,4 @@ with st.expander("?? Ready to Deploy to Streamlit Cloud?"):
         • Professional design
         • Mobile responsive
         """)
+
