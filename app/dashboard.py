@@ -30,11 +30,6 @@ if not os.path.exists("data/raw/Expression_Data_subset.csv"):
 # ====================
 st.set_page_config(page_title="Drug Response Prediction", layout="wide", page_icon="💊")
 
-# Auto-download data if not present (for Streamlit Cloud deployment)
-if not os.path.exists("data/raw/Expression_Data_subset.csv"):
-    with st.spinner("Downloading required biological datasets (First time setup)..."):
-        subprocess.run(["python", "download_data.py"])
-
 # ====================
 # PAGE CONFIG & CUSTOM CSS
 # ====================
