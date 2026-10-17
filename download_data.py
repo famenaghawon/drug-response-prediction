@@ -21,26 +21,18 @@ def download_drug_data():
     print(f"✅ Successfully downloaded Drug data.")
 
 def download_expression_data():
-    """Downloads the filtered CSV from Google Drive using gdown."""
-    import gdown
-    
-    file_id = "1zrdFIPgWrBeMAbv8XG0KcuTVHBesp5Tc"
+    import urllib.request
+    # Paste your copied link here
+    url = "https://github.com/famenaghawon/drug-response-prediction/releases/download/v1.0.0/Expression_Data_subset.csv"
     dest = os.path.join(DATA_DIR, "Expression_Data_subset.csv")
     
     if os.path.exists(dest):
         print(f"✅ Expression data already exists.")
         return
         
-    print(f"⬇️ Downloading Expression Data from Google Drive...")
-    url = f"https://drive.google.com/uc?id={file_id}"
-    
-    try:
-        # Adding a user-agent to prevent Google from blocking the cloud server
-        gdown.download(url, dest, quiet=False, user_agent="Mozilla/5.0")
-        print(f"✅ Successfully downloaded Expression Data.")
-    except Exception as e:
-        print(f"❌ Failed to download expression data: {e}")
-        sys.exit(1)
+    print(f"⬇️ Downloading Expression Data from GitHub Releases...")
+    urllib.request.urlretrieve(url, dest)
+    print(f"✅ Successfully downloaded Expression Data.")
 
 if __name__ == "__main__":
     print("🚀 Initializing Data Pipeline...")
