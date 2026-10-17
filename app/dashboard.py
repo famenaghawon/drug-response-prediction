@@ -11,8 +11,23 @@ from statsmodels.stats.multitest import multipletests
 import os
 import warnings
 warnings.filterwarnings('ignore')
-import os
 import subprocess
+
+# ====================
+# AUTO-DOWNLOAD FOR CLOUD DEPLOYMENT
+# ====================
+if not os.path.exists("data/raw/Expression_Data_subset.csv"):
+    with st.spinner("Downloading required biological datasets (First time setup)..."):
+        try:
+            subprocess.run(["python", "download_data.py"], check=True)
+        except Exception as e:
+            st.error(f"Data download failed: {e}")
+            st.stop()
+
+# ====================
+# PAGE CONFIG & CUSTOM CSS
+# ====================
+st.set_page_config(page_title="Drug Response Prediction", layout="wide", page_icon="💊")
 
 # Auto-download data if not present (for Streamlit Cloud deployment)
 if not os.path.exists("data/raw/Expression_Data_subset.csv"):
