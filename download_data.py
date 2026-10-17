@@ -31,15 +31,16 @@ def download_expression_data():
         print(f"✅ Expression data already exists.")
         return
         
-    print(f"⬇️ Downloading Expression Data from Google Drive (This may take a minute)...")
+    print(f"⬇️ Downloading Expression Data from Google Drive...")
     url = f"https://drive.google.com/uc?id={file_id}"
     
     try:
-        gdown.download(url, dest, quiet=False)
+        # Adding a user-agent to prevent Google from blocking the cloud server
+        gdown.download(url, dest, quiet=False, user_agent="Mozilla/5.0")
         print(f"✅ Successfully downloaded Expression Data.")
     except Exception as e:
         print(f"❌ Failed to download expression data: {e}")
-        sys.exit(1) # Force CI to fail if download fails
+        sys.exit(1)
 
 if __name__ == "__main__":
     print("🚀 Initializing Data Pipeline...")
