@@ -1,18 +1,15 @@
-import pytest
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.model import train_drug_model
-import numpy as np
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from src.data_loader import get_ml_features
+import pandas as pd
 
-def test_model_training():
-    # Create fake data for testing logic
-    X = np.random.rand(100, 5)
-    y = np.random.rand(100)
-    
-    model, metrics = train_drug_model(X, y)
-    
-    assert model is not None
-    assert metrics['test_r2'] is not None
-    assert isinstance(metrics['test_rmse'], float)
-    print("Model logic works.")
+def test_get_ml_features():
+    # Create a dummy dataframe to test the feature extractor
+    dummy_df = pd.DataFrame({
+        'Gene': ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'],
+        'Significant': [True, True, True, True, True, True]
+    })
+    features = get_ml_features(dummy_df, top_n=3)
+    assert len(features) == 3
+    assert features == ['G1', 'G2', 'G3']
