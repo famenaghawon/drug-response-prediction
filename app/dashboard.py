@@ -1,4 +1,22 @@
+import os
 import streamlit as st
+
+# ====================
+# AUTO-DOWNLOAD FOR CLOUD DEPLOYMENT
+# ====================
+if not os.path.exists("data/raw/Expression_Data_subset.csv"):
+    with st.spinner("Downloading required biological datasets (First time setup). This may take 1-2 minutes..."):
+        try:
+            import runpy
+            # This executes the download_data.py script directly in Python
+            runpy.run_path("download_data.py", run_name="__main__")
+        except Exception as e:
+            st.error(f"Data download failed: {e}")
+            st.stop()
+
+# ====================
+# PAGE CONFIG & CUSTOM CSS
+# ====================
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -8,25 +26,9 @@ from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
-import os
 import warnings
 warnings.filterwarnings('ignore')
-import subprocess
 
-# ====================
-# AUTO-DOWNLOAD FOR CLOUD DEPLOYMENT
-# ====================
-if not os.path.exists("data/raw/Expression_Data_subset.csv"):
-    with st.spinner("Downloading required biological datasets (First time setup)..."):
-        try:
-            subprocess.run(["python", "download_data.py"], check=True)
-        except Exception as e:
-            st.error(f"Data download failed: {e}")
-            st.stop()
-
-# ====================
-# PAGE CONFIG & CUSTOM CSS
-# ====================
 st.set_page_config(page_title="Drug Response Prediction", layout="wide", page_icon="💊")
 
 # Auto-download data if not present (for Streamlit Cloud deployment)
