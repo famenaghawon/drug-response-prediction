@@ -3,844 +3,270 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import plotly.figure_factory as ff
-from plotly.subplots import make_subplots
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-import joblib
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
+from sklearn.metrics import r2_score, mean_squared_error
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
+import os
 import warnings
 warnings.filterwarnings('ignore')
+import os
+import subprocess
+
+# Auto-download data if not present (for Streamlit Cloud deployment)
+if not os.path.exists("data/raw/Expression_Data_subset.csv"):
+    with st.spinner("Downloading required biological datasets (First time setup)..."):
+        subprocess.run(["python", "download_data.py"])
 
 # ====================
-# PAGE CONFIG
+# PAGE CONFIG & CUSTOM CSS
 # ====================
-st.set_page_config(
-    page_title="?? Advanced Drug Response Prediction",
-    page_icon="??",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Drug Response Prediction", layout="wide", page_icon="ðŸ’Š")
 
-# ====================
-# CUSTOM CSS
-# ====================
 st.markdown("""
 <style>
-    .main-title {
-        font-size: 2.8rem;
-        color: #1E3A8A;
-        text-align: center;
-        margin-bottom: 0.5rem;
-        font-weight: 800;
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    .main-title { font-size: 2.5rem; color: #4F8BF9; text-align: center; font-weight: 800; margin-bottom: 0; }
+    .sub-title { font-size: 1.1rem; color: #8C9EFF; text-align: center; margin-bottom: 2rem; }
+    .metric-card { 
+        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); 
+        padding: 1.5rem; border-radius: 10px; color: white; text-align: center; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 1rem;
     }
-    .sub-title {
-        font-size: 1.2rem;
-        color: #3B82F6;
-        text-align: center;
-        margin-bottom: 2rem;
-        font-weight: 400;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        margin-bottom: 1rem;
-    }
-    .highlight {
-        background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 600;
-    }
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 0.7rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
+    .metric-value { font-size: 2rem; font-weight: bold; line-height: 1.2; }
+    .metric-label { font-size: 0.9rem; color: #E2E8F0; text-transform: uppercase; letter-spacing: 1px; }
+    .footer { text-align: center; color: #888; font-size: 0.8rem; margin-top: 3rem; }
 </style>
 """, unsafe_allow_html=True)
 
 # ====================
-# SIDEBAR
-# ====================
-with st.sidebar:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.title("?? Advanced Drug Discovery")
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    ### ?? Interactive Exploration
-    Multi-omics biomarkers & drug efficacy
-    
-    *Features:*
-    • Differential Expression Analysis
-    • Dose-Response Modeling
-    • Biomarker Correlation Networks
-    • 3D Multi-omics Landscapes
-    • ML Drug Response Predictor
-    """)
-    
-    st.markdown("---")
-    st.markdown("### ? Analysis Parameters")
-    
-    # Interactive controls
-    p_value_threshold = st.slider(
-        "?? P-value Threshold",
-        min_value=0.001,
-        max_value=0.05,
-        value=0.001,
-        step=0.001,
-        help="Statistical significance cutoff for biomarker discovery"
-    )
-    
-    fold_change_threshold = st.slider(
-        "?? Fold Change Threshold",
-        min_value=1.0,
-        max_value=3.0,
-        value=1.5,
-        step=0.1,
-        help="Minimum absolute log2 fold change for significance"
-    )
-    
-    # Drug selection
-    selected_drug = st.selectbox(
-        "?? Select Drug",
-        ["Erlotinib", "Gefitinib", "Afatinib", "Osimertinib"],
-        help="Choose drug for dose-response analysis"
-    )
-    
-    # Model parameters
-    st.markdown("---")
-    st.markdown("### ?? ML Model Settings")
-    n_trees = st.slider(
-        "?? Number of Trees",
-        min_value=50,
-        max_value=500,
-        value=100,
-        step=50,
-        help="Random Forest model complexity"
-    )
-    
-    st.markdown("---")
-    st.markdown("#### ????? Developer")
-    st.markdown("Name: Freedom Evbakoe Amenaghawon")
-    st.markdown("GitHub: [@famenaghawon](https://github.com/famenaghawon)")
-    st.markdown("ORCID: [0009-0003-1457-809X](https://orcid.org/0009-0003-1457-809X)")
-    st.markdown("Email: f.e.amenaghawon@gmail.com")
-    st.markdown("LinkedIn: [famenaghawon](https://www.linkedin.com/in/famenaghawon")
-
-# ====================
-# DATA GENERATION
+# DATA PIPELINE
 # ====================
 @st.cache_data
-def generate_data():
-    """Generate synthetic gene expression AND drug response data"""
-    np.random.seed(42)
+def load_real_data():
+    resp_path = "data/raw/GDSC2_fitted_dose_response_27Oct23.xlsx"
+    expr_path = "data/raw/Expression_Data_subset.csv"
     
-    # 1. GENE EXPRESSION DATA (for volcano plot)
-    n_genes = 500
-    gene_data = pd.DataFrame({
-        'gene_id': [f'GENE_{i:04d}' for i in range(1, n_genes + 1)],
-        'gene_name': [f'Gene_{chr(65+(i%26))}{i%100:02d}' for i in range(n_genes)],
-        'log2_fold_change': np.random.normal(0, 2, n_genes),
-        'p_value': 10**(-np.random.exponential(1.5, n_genes)),
-        'expression_level': np.random.lognormal(5, 0.8, n_genes),
-        'pathway': np.random.choice(['EGFR Signaling', 'Apoptosis', 'Cell Cycle', 
-                                    'DNA Repair', 'Metabolism', 'Immune Response'], n_genes),
-        'chromosome': np.random.choice([f'chr{i}' for i in range(1, 23)], n_genes),
-        'drug_target': np.random.choice([True, False], n_genes, p=[0.2, 0.8])
-    })
-    gene_data['-log10_p'] = -np.log10(gene_data['p_value'])
-    
-    # 2. DRUG RESPONSE DATA
-    cell_lines = ['A549 (Lung)', 'HCC827 (Lung, EGFR-mut)', 'PC9 (Lung)',
-                  'H1975 (Lung, T790M)', 'MDA-MB-231 (Breast)', 'HT29 (Colon)',
-                  'PC3 (Prostate)', 'MIA-PaCa2 (Pancreatic)']
-    drugs = ['Erlotinib', 'Gefitinib', 'Afatinib', 'Osimertinib']
-    
-    drug_response_data = []
-    for drug in drugs:
-        for cl in cell_lines:
-            if 'EGFR-mut' in cl:
-                ic50 = 0.05 + np.random.uniform(0, 0.1)
-            elif 'T790M' in cl:
-                ic50 = 0.5 + np.random.uniform(0, 0.3)
-            else:
-                ic50 = 2.0 + np.random.uniform(0, 1.0)
-                
-            concentrations = np.logspace(-3, 2, 20)
-            for conc in concentrations:
-                viability = 100 / (1 + (conc / ic50)) + np.random.normal(0, 5)
-                drug_response_data.append({
-                    'drug': drug,
-                    'cell_line': cl,
-                    'concentration': conc,
-                    'viability': np.clip(viability, 0, 100),
-                    'ic50_estimated': ic50,
-                    'sensitivity': 'Sensitive' if ic50 < 0.1 else 'Intermediate' if ic50 < 1.0 else 'Resistant'
-                })
-    
-    drug_response_df = pd.DataFrame(drug_response_data)
-    
-    # 3. CLINICAL MOCK DATA
-    clinical_data = pd.DataFrame({
-        'patient_id': [f'PT{i:03d}' for i in range(1, 101)],
-        'age': np.random.randint(30, 80, 100),
-        'gender': np.random.choice(['Male', 'Female'], 100),
-        'cancer_stage': np.random.choice(['I', 'II', 'III', 'IV'], 100, p=[0.2, 0.3, 0.3, 0.2]),
-        'treatment_response': np.random.choice(['Complete', 'Partial', 'Stable', 'Progressive'], 100),
-        'survival_days': np.random.exponential(365, 100),
-        'mutation_count': np.random.poisson(10, 100)
-    })
-    
-    return gene_data, drug_response_df, clinical_data
+    if not os.path.exists(resp_path) or not os.path.exists(expr_path):
+        return None, None
+        
+    df_resp = pd.read_excel(resp_path)
+    df_resp = df_resp.rename(columns={'CELL_LINE_NAME': 'Cell_Line', 'DRUG_NAME': 'Drug', 'LN_IC50': 'IC50'})
+    df_expr = pd.read_csv(expr_path, index_col=0) 
+    return df_resp, df_expr
 
+@st.cache_data
+def process_biomarkers(df_resp, df_expr, drug_name):
+    drug_data = df_resp[df_resp['Drug'] == drug_name].copy()
+    if drug_data.empty: return None, None
+        
+    expr_t = df_expr.T
+    merged = pd.merge(drug_data, expr_t, left_on='Cell_Line', right_index=True, how='inner')
+    if merged.empty: return None, None
+
+    gene_cols = expr_t.columns
+    results = []
+    for gene in gene_cols:
+        clean_data = merged[[gene, 'IC50']].dropna()
+        if len(clean_data) > 5:
+            corr, p = stats.pearsonr(clean_data[gene], clean_data['IC50'])
+            results.append({'Gene': gene, 'Correlation': corr, 'P_Value': p})
+            
+    results_df = pd.DataFrame(results)
+    if results_df.empty: return None, None
+        
+    p_vals = results_df['P_Value'].values
+    reject, p_adj, _, _ = multipletests(p_vals, alpha=0.05, method='fdr_bh')
+    results_df['P_Value_FDR'] = p_adj
+    results_df['-log10_P_Raw'] = -np.log10(results_df['P_Value'] + 1e-300)
+    results_df['Significant'] = (results_df['P_Value'] < 0.05) & (results_df['Correlation'].abs() > 0.25)
+    
+    return merged, results_df
+
+# Auto-train the model (Cached)
 @st.cache_resource
-def train_drug_response_model(_gene_data, n_estimators=100):
-    """Train ML model for drug response prediction"""
-    np.random.seed(42)
-    
-    # Create realistic synthetic features for ML
-    n_samples = 300
-    n_features = 15
-    
-    # Generate correlated features (mimicking gene expression)
-    base_features = np.random.randn(n_samples, 3)
-    X = np.zeros((n_samples, n_features))
-    
-    # Create correlated features
-    for i in range(n_features):
-        if i < 3:
-            X[:, i] = base_features[:, i] + np.random.randn(n_samples) * 0.3
-        else:
-            corr_idx = i % 3
-            X[:, i] = base_features[:, corr_idx] * np.random.uniform(0.5, 1.0) + np.random.randn(n_samples) * 0.5
-    
-    # Generate IC50 values based on feature patterns
-    y = (X[:, 0] * 2.0 + X[:, 1] * (-1.5) + X[:, 2] * 0.8 + 
-         np.random.randn(n_samples) * 1.5)
-    y = np.clip(y, 0.1, 10.0)  # Realistic IC50 range
-    
-    # Train model
-    model = RandomForestRegressor(
-        n_estimators=n_estimators,
-        random_state=42,
-        max_depth=10,
-        min_samples_split=5
-    )
+def train_ml_model(data_df, features, target_col='IC50'):
+    X = data_df[features].values
+    y = data_df[target_col].values
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model.fit(X_train, y_train)
+    rf = RandomForestRegressor(n_estimators=200, max_depth=12, min_samples_split=5, random_state=42, n_jobs=-1)
     
-    accuracy = model.score(X_test, y_test)
+    cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    cv_scores = cross_val_score(rf, X_train, y_train, cv=cv, scoring='r2')
+    rf.fit(X_train, y_train)
     
-    # Feature importance
-    feature_names = [f'Gene_{i+1}' for i in range(n_features)]
-    feature_importance = pd.DataFrame({
-        'feature': feature_names,
-        'importance': model.feature_importances_
-    }).sort_values('importance', ascending=False)
+    y_pred = rf.predict(X_test)
+    r2 = r2_score(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     
-    return model, accuracy, feature_importance
-
-# Generate data
-gene_data, drug_response_df, clinical_data = generate_data()
-gene_data['significant'] = (gene_data['p_value'] < p_value_threshold) & (abs(gene_data['log2_fold_change']) > fold_change_threshold)
-
-# Train ML model
-model, model_accuracy, feature_importance = train_drug_response_model(gene_data, n_trees)
+    # Save predictions for the scatter plot
+    pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
+    
+    return rf, {'cv_r2': cv_scores.mean(), 'test_r2': r2, 'test_rmse': rmse}, pred_df
 
 # ====================
-# MAIN DASHBOARD
+# MAIN APP EXECUTION
 # ====================
-st.markdown('<h1 class="main-title">?? ADVANCED DRUG RESPONSE PREDICTION SYSTEM</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Multi-Omics Integration • Machine Learning • Precision Oncology</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">Advanced Drug Response Prediction</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">Real GDSC Data | FDR Statistics | Machine Learning</p>', unsafe_allow_html=True)
 
-# Top Metrics
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric("?? Genes", "500", "+42 significant")
-    st.markdown('</div>', unsafe_allow_html=True)
+df_resp, df_expr = load_real_data()
 
-with col2:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric("?? Drugs", "4", "+8 cell lines")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col3:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric("?? ML Accuracy", f"{model_accuracy*100:.1f}%", f"+{n_trees} trees")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col4:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric("???? Patients", "100", "Clinical data")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col5:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.metric("?? Biomarkers", f"{gene_data['significant'].sum()}", f"p<{p_value_threshold}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# Create tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "?? Volcano Plot", 
-    "?? Dose-Response", 
-    "?? Correlation", 
-    "?? 3D Landscape", 
-    "?? ML Predictor",
-    "???? Clinical Data"
-])
-
-# TAB 1: Volcano Plot
-with tab1:
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        # Enhanced volcano plot with pathways
-        pathway_colors = {
-            'EGFR Signaling': '#FF6B6B',
-            'Apoptosis': '#4ECDC4',
-            'Cell Cycle': '#45B7D1',
-            'DNA Repair': '#96CEB4',
-            'Metabolism': '#FFEAA7',
-            'Immune Response': '#DDA0DD'
-        }
+if df_resp is not None and df_expr is not None:
+    with st.sidebar:
+        st.image("https://cdn-icons-png.flaticon.com/512/3014/3014521.png", width=80)
+        st.header("Configuration")
         
-        fig = px.scatter(gene_data, x='log2_fold_change', y='-log10_p',
-                        color='pathway', hover_name='gene_name',
-                        hover_data=['gene_id', 'expression_level', 'drug_target'],
-                        color_discrete_map=pathway_colors,
-                        title=f'<b>Volcano Plot: Differential Gene Expression</b><br>P < {p_value_threshold}, |FC| > {fold_change_threshold}',
-                        labels={
-                            'log2_fold_change': 'Log2 Fold Change',
-                            '-log10_p': '-Log10(P-value)',
-                            'pathway': 'Biological Pathway'
-                        },
-                        template='plotly_dark')
+        available_drugs = df_resp['Drug'].unique()
+        default_drugs = ['Erlotinib', 'Gefitinib', 'Afatinib', 'Osimertinib']
+        selected_drug = st.selectbox("Select EGFR Inhibitor", [d for d in default_drugs if d in available_drugs] or available_drugs)
         
-        # Add significance thresholds
-        fig.add_hline(y=-np.log10(p_value_threshold), line_dash="dash", 
-                     line_color="white", opacity=0.7, annotation_text=f"p={p_value_threshold}")
-        fig.add_vline(x=fold_change_threshold, line_dash="dash", 
-                     line_color="white", opacity=0.7)
-        fig.add_vline(x=-fold_change_threshold, line_dash="dash", 
-                     line_color="white", opacity=0.7)
+        st.markdown("---")
+        st.markdown(f"**Dataset Info:**\n- GDSC2 Real Data\n- {df_expr.shape[1]:,} Cell Lines\n- {df_expr.shape[0]:,} Genes")
+    
+    merged_df, results_df = process_biomarkers(df_resp, df_expr, selected_drug)
+    
+    if merged_df is None:
+        st.error(f"No matching cell lines found for {selected_drug}.")
+    else:
+        tab1, tab2, tab3, tab4 = st.tabs(["Volcano Plot", "Dose-Response", "ML Predictor", "Data Integrity"])
         
-        fig.update_layout(
-            height=600,
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=1.02
-            )
-        )
-        st.plotly_chart(fig, use_container_width='stretch'))
-    
-    with col2:
-        st.markdown("### ?? Statistics")
-        
-        st.markdown(f"""
-        <div class="highlight">
-        ?? *Significant Biomarkers:* {gene_data['significant'].sum()}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.metric("Total Genes", len(gene_data))
-        st.metric("Drug Targets", gene_data['drug_target'].sum())
-        st.metric("Mean Fold Change", f"{gene_data['log2_fold_change'].abs().mean():.2f}")
-        
-        st.markdown("### ?? Top 5 Biomarkers")
-        top_biomarkers = gene_data.nlargest(5, 'expression_level')[[
-            'gene_name', 'log2_fold_change', 'p_value', 'pathway'
-        ]]
-        top_biomarkers['p_value'] = top_biomarkers['p_value'].apply(lambda x: f"{x:.2e}")
-        st.dataframe(top_biomarkers, width='stretch')
-        
-        # Download options
-        col_d1, col_d2 = st.columns(2)
-        with col_d1:
-            st.download_button(
-                label="?? CSV Data",
-                data=gene_data.to_csv(index=False),
-                file_name="biomarker_data.csv",
-                mime="text/csv",
-                use_container_width='stretch')
-            )
-        
-        with col_d2:
-            if st.button("?? Generate Report", use_container_width='stretch')):
-                st.success("Report generated! Check downloads folder.")
-
-# TAB 2: Dose-Response
-with tab2:
-    st.header(f"Dose-Response Analysis: {selected_drug}")
-    
-    # Filter data
-    plot_df = drug_response_df[drug_response_df['drug'] == selected_drug]
-    
-    # Create interactive plot
-    fig = go.Figure()
-    
-    # Color map for sensitivity
-    sensitivity_colors = {
-        'Sensitive': '#00CC96',
-        'Intermediate': '#FFA15A',
-        'Resistant': '#EF553B'
-    }
-    
-    for cl in plot_df['cell_line'].unique():
-        cl_data = plot_df[plot_df['cell_line'] == cl]
-        sensitivity = cl_data['sensitivity'].iloc[0]
-        
-        fig.add_trace(go.Scatter(
-            x=cl_data['concentration'], 
-            y=cl_data['viability'],
-            mode='lines+markers',
-            name=cl,
-            line=dict(color=sensitivity_colors.get(sensitivity, '#636EFA'), width=3),
-            hovertemplate='<b>%{fullData.name}</b><br>' +
-                         'Conc: %{x:.3f} µM<br>' +
-                         'Viability: %{y:.1f}%<br>' +
-                         'IC50: %{customdata:.3f} µM<br>' +
-                         'Sensitivity: ' + sensitivity + '<extra></extra>',
-            customdata=cl_data['ic50_estimated']
-        ))
-    
-    fig.update_layout(
-        title=f'<b>{selected_drug} Response Curves</b>',
-        xaxis_title='Drug Concentration (µM, log scale)',
-        yaxis_title='Cell Viability (%)',
-        xaxis_type='log',
-        template='plotly_dark',
-        hovermode='x unified',
-        height=500,
-        showlegend=True,
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01
-        )
-    )
-    
-    st.plotly_chart(fig, use_container_width='stretch'))
-    
-    # IC50 Analysis
-    col_ic1, col_ic2 = st.columns(2)
-    
-    with col_ic1:
-        st.subheader("?? IC50 Summary")
-        ic50_summary = plot_df.groupby(['cell_line', 'sensitivity']).agg({
-            'ic50_estimated': ['first', 'std'],
-            'viability': 'mean'
-        }).round(3)
-        ic50_summary.columns = ['IC50 (µM)', 'IC50 Std', 'Avg Viability']
-        st.dataframe(ic50_summary, use_container_width='stretch'))
-    
-    with col_ic2:
-        st.subheader("?? Sensitivity Distribution")
-        
-        # Bar chart of sensitivities
-        sensitivity_counts = plot_df.groupby('sensitivity').size()
-        fig_bar = px.bar(
-            x=sensitivity_counts.index,
-            y=sensitivity_counts.values,
-            color=sensitivity_counts.index,
-            color_discrete_map=sensitivity_colors,
-            labels={'x': 'Sensitivity', 'y': 'Count'},
-            title='Cell Line Sensitivity Distribution'
-        )
-        fig_bar.update_layout(template='plotly_dark', showlegend=False)
-        st.plotly_chart(fig_bar, use_container_width='stretch'))
-
-# TAB 3: Correlation Matrix
-with tab3:
-    st.header("Biomarker Correlation Network")
-    
-    # Select biomarkers
-    col_corr1, col_corr2 = st.columns([3, 1])
-    
-    with col_corr2:
-        n_biomarkers = st.slider("Number of Biomarkers", 5, 20, 10)
-        show_labels = st.checkbox("Show Labels", True)
-    
-    top_biomarkers = gene_data.nlargest(n_biomarkers, 'expression_level')['gene_name'].tolist()
-    
-    # Generate realistic correlation matrix
-    np.random.seed(42)
-    base_pattern = np.random.randn(len(top_biomarkers))
-    corr_matrix = np.outer(base_pattern, base_pattern) * 0.3
-    corr_matrix += np.random.randn(len(top_biomarkers), len(top_biomarkers)) * 0.2
-    corr_matrix = np.clip(corr_matrix, -1, 1)
-    np.fill_diagonal(corr_matrix, 1)
-    
-    fig = ff.create_annotated_heatmap(
-        z=corr_matrix,
-        x=top_biomarkers,
-        y=top_biomarkers,
-        annotation_text=np.around(corr_matrix, decimals=2) if show_labels else None,
-        colorscale='RdBu',
-        zmin=-1,
-        zmax=1,
-        showscale=True
-    )
-    
-    fig.update_layout(
-        title=f'<b>Top {n_biomarkers} Biomarker Correlation Matrix</b>',
-        width=800,
-        height=800,
-        template='plotly_dark',
-        yaxis=dict(autorange='reversed'),
-        xaxis=dict(tickangle=45)
-    )
-    
-    st.plotly_chart(fig, width='stretch')
-    
-    # Network graph option
-    if st.button("?? Generate Network Graph"):
-        st.info("Network visualization would show gene-gene interactions")
-
-# TAB 4: 3D Landscape
-with tab4:
-    st.header("3D Multi-Omics Landscape")
-    
-    # Select variables for 3D plot
-    col_3d1, col_3d2, col_3d3 = st.columns(3)
-    
-    with col_3d1:
-        x_var = st.selectbox("X-axis", ['log2_fold_change', 'expression_level', 'p_value'], 0)
-    with col_3d2:
-        y_var = st.selectbox("Y-axis", ['expression_level', '-log10_p', 'log2_fold_change'], 0)
-    with col_3d3:
-        z_var = st.selectbox("Z-axis", ['-log10_p', 'log2_fold_change', 'expression_level'], 0)
-    
-    # Create 3D scatter
-    plot_3d_data = gene_data.copy()
-    plot_3d_data['size'] = np.where(plot_3d_data['significant'], 12, 6)
-    plot_3d_data['color'] = np.where(plot_3d_data['significant'], '#EF553B', '#636EFA')
-    
-    fig = px.scatter_3d(
-        plot_3d_data,
-        x=x_var,
-        y=y_var,
-        z=z_var,
-        color='pathway',
-        size='size',
-        hover_name='gene_name',
-        hover_data=['gene_id', 'drug_target', 'chromosome'],
-        title='<b>3D Multi-Omics Biomarker Landscape</b>',
-        color_discrete_map=pathway_colors,
-        template='plotly_dark'
-    )
-    
-    fig.update_layout(
-        width=1000,
-        height=700,
-        scene=dict(
-            xaxis_title=x_var.replace('_', ' ').title(),
-            yaxis_title=y_var.replace('_', ' ').title(),
-            zaxis_title=z_var.replace('_', ' ').title(),
-            camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.5)
-            )
-        )
-    )
-    
-    st.plotly_chart(fig, width='stretch')
-
-# TAB 5: ML Predictor - FIXED VERSION
-with tab5:
-    st.header("?? Machine Learning Drug Response Predictor")
-    st.markdown("Predict IC50 values based on gene expression profiles")
-    
-    col_ml1, col_ml2 = st.columns([3, 1])
-    
-    with col_ml1:
-        # Initialize session state for gene values if not exists
-        if 'gene_values_initialized' not in st.session_state:
-            for i in range(15):
-                st.session_state[f"gene_{i}"] = 0.0
-            st.session_state.gene_values_initialized = True
-        
-        # Create input sliders for gene features
-        st.subheader("?? Input Gene Expression Features")
-        
-        # Create a grid of sliders
-        cols = st.columns(5)
-        features = []
-        
-        for i in range(15):
-            with cols[i % 5]:
-                # Get current value from session state
-                current_value = st.session_state[f"gene_{i}"]
+        # TAB 1: VOLCANO PLOT
+        with tab1:
+            st.header(f"Biomarker Discovery: {selected_drug}")
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                results_df['plot_y'] = np.clip(results_df['-log10_P_Raw'], 0, 12)
                 
-                # Create slider with session state value
-                feature_value = st.slider(
-                    f"Gene {i+1}", 
-                    -3.0, 3.0, 
-                    float(current_value), 0.1,
-                    help=f"Expression level for synthetic gene {i+1}",
-                    key=f"gene_slider_{i}"
+                fig = px.scatter(
+                    results_df, x='Correlation', y='plot_y',
+                    color='Significant', hover_name='Gene',
+                    color_discrete_map={True: '#EF553B', False: '#636EFA'},
+                    labels={'plot_y': '-log10(Raw P-value)', 'Correlation': 'Pearson Correlation (r)'},
+                    title=f"Volcano Plot: Gene Expression vs {selected_drug} IC50",
+                    template='plotly_dark'
                 )
-                features.append(feature_value)
-        
-        # Prediction and randomize buttons
-        col_btn1, col_btn2 = st.columns(2)
-        
-        with col_btn1:
-            predict_btn = st.button("?? Predict Drug Response", type="primary", use_container_width='stretch'))
-        
-        with col_btn2:
-            random_btn = st.button("?? Randomize Inputs", use_container_width='stretch'))
-            
-            if random_btn:
-                # Update session state with random values
-                for i in range(15):
-                    st.session_state[f"gene_{i}"] = float(np.random.uniform(-3, 3))
-                st.rerun()  # This will rerun the app to update sliders
-        
-        if predict_btn:
-            # Make prediction
-            X_input = np.array(features).reshape(1, -1)
-            prediction = model.predict(X_input)[0]
-            
-            # Display prediction with animation
-            st.success("? *Prediction Complete!*")
-            
-            # Create metrics display
-            pred_col1, pred_col2, pred_col3 = st.columns(3)
-            
-            with pred_col1:
-                st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-                st.metric("Predicted IC50", f"{prediction:.2f} µM")
-                st.markdown('</div>', unsafe_allow_html=True)
-            
-            with pred_col2:
-                # Determine sensitivity
-                if prediction < 0.5:
-                    sensitivity = "Highly Sensitive"
-                    color = "#00CC96"
-                    emoji = "??"
-                elif prediction < 2.0:
-                    sensitivity = "Sensitive"
-                    color = "#4ECDC4"
-                    emoji = "?"
-                elif prediction < 5.0:
-                    sensitivity = "Intermediate"
-                    color = "#FFA15A"
-                    emoji = "?"
-                else:
-                    sensitivity = "Resistant"
-                    color = "#EF553B"
-                    emoji = "?"
+                fig.add_hline(y=-np.log10(0.05), line_dash="dash", line_color="#10B981", annotation_text="P=0.05")
+                fig.add_vline(x=0.25, line_dash="dash", line_color="#10B981")
+                fig.add_vline(x=-0.25, line_dash="dash", line_color="#10B981")
+                fig.update_layout(margin=dict(l=0, r=0, t=40, b=0), height=500)
+                st.plotly_chart(fig, width='stretch')
                 
-                st.markdown(f'<div class="metric-card" style="background: linear-gradient(135deg, {color}22 0%, {color}44 100%);">', unsafe_allow_html=True)
-                st.metric(f"{emoji} Response", sensitivity)
-                st.markdown('</div>', unsafe_allow_html=True)
-            
-            with pred_col3:
-                confidence = model_accuracy * 100
-                st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-                st.metric("Model Confidence", f"{confidence:.1f}%")
-                st.markdown('</div>', unsafe_allow_html=True)
-            
-            # Feature importance visualization
-            st.subheader("?? Feature Importance")
-            
-            fig_importance = px.bar(
-                feature_importance.head(10),
-                x='importance',
-                y='feature',
-                orientation='h',
-                title='Top 10 Most Important Features',
-                color='importance',
-                color_continuous_scale='Viridis'
-            )
-            fig_importance.update_layout(template='plotly_dark', height=400)
-            st.plotly_chart(fig_importance, use_container_width='stretch'))
-            
-            # Interpretation
-            st.info(f"""
-            *Interpretation:*
-            - *IC50 Value:* {prediction:.2f} µM indicates the drug concentration needed to inhibit 50% of cell growth
-            - *Lower IC50* = More potent drug
-            - *Higher IC50* = Less effective drug
-            - *Clinical Relevance:* Values below 1.0 µM are typically considered promising for development
-            """)
-    
-    with col_ml2:
-        st.markdown("### ?? Model Performance")
-        st.metric("Accuracy", f"{model_accuracy*100:.1f}%")
-        st.metric("Training Samples", "300")
-        st.metric("Features", "15")
-        st.metric("Trees", n_trees)
-        
-        st.markdown("---")
-        st.markdown("### ? Model Details")
-        st.markdown("""
-        *Algorithm:* Random Forest Regressor
-        
-        *Target:* IC50 (µM)
-        
-        *Features:* Synthetic gene expression
-        
-        *Test Split:* 20%
-        
-        *Optimization:* Grid Search Tuned
-        """)
-        
-        # Model download
-        st.markdown("---")
-        if st.button("?? Download Model", use_container_width='stretch'):
-            # Save model
-            model_bytes = joblib.dumps(model)
-            st.download_button(
-                label="Click to Download",
-                data=model_bytes,
-                file_name="drug_response_model.pkl",
-                mime="application/octet-stream",
-                use_container_width='stretch')
-            )
+            with col2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">Total Genes Tested</div>
+                    <div class="metric-value">{len(results_df):,}</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #065F46 0%, #10B981 100%);">
+                    <div class="metric-label">Significant Biomarkers</div>
+                    <div class="metric-value">{results_df['Significant'].sum():,}</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #7F1D1D 0%, #EF4444 100%);">
+                    <div class="metric-label">Cell Lines Analyzed</div>
+                    <div class="metric-value">{len(merged_df)}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.download_button("ðŸ“¥ Download Results (CSV)", results_df.to_csv(index=False), "biomarkers.csv", width='stretch')
 
-# TAB 6: Clinical Data
-with tab6:
-    st.header("???? Clinical Data Analysis")
-    
-    col_clin1, col_clin2 = st.columns(2)
-    
-    with col_clin1:
-        st.subheader("Patient Demographics")
-        st.dataframe(clinical_data.head(10), use_container_width='stretch'))
-        
-        # Survival analysis
-        fig_survival = px.histogram(
-            clinical_data,
-            x='survival_days',
-            nbins=20,
-            title='Patient Survival Distribution',
-            color='treatment_response',
-            template='plotly_dark'
-        )
-        st.plotly_chart(fig_survival, use_container_width='stretch'))
-    
-    with col_clin2:
-        st.subheader("Clinical Statistics")
-        
-        # Summary metrics
-        clin_col1, clin_col2 = st.columns(2)
-        with clin_col1:
-            st.metric("Average Age", f"{clinical_data['age'].mean():.1f}")
-            st.metric("Mutation Count", f"{clinical_data['mutation_count'].mean():.1f}")
-        with clin_col2:
-            st.metric("Median Survival", f"{clinical_data['survival_days'].median():.0f} days")
-            st.metric("Complete Response", f"{(clinical_data['treatment_response'] == 'Complete').sum()}")
-        
-        # Treatment response pie chart
-        response_counts = clinical_data['treatment_response'].value_counts()
-        fig_pie = px.pie(
-            values=response_counts.values,
-            names=response_counts.index,
-            title='Treatment Response Distribution',
-            hole=0.4,
-            color_discrete_sequence=px.colors.qualitative.Set3
-        )
-        fig_pie.update_layout(template='plotly_dark')
-        st.plotly_chart(fig_pie, use_container_width='stretch'))
+        # TAB 2: DOSE RESPONSE
+        with tab2:
+            st.header(f"Dose-Response Analysis: {selected_drug}")
+            st.markdown("Distribution of LN(IC50) across the analyzed cell lines. Lower values indicate higher sensitivity to the drug.")
+            
+            fig_hist = px.histogram(
+                merged_df, x='IC50', nbins=30, 
+                title=f"Distribution of {selected_drug} LN(IC50)",
+                labels={'IC50': 'LN(IC50)'},
+                color_discrete_sequence=['#4F8BF9'],
+                template='plotly_dark'
+            )
+            st.plotly_chart(fig_hist, width='stretch')
+            
+            st.subheader("Top 10 Most Sensitive Cell Lines")
+            sensitive = merged_df.nsmallest(10, 'IC50')[['Cell_Line', 'IC50']]
+            st.dataframe(sensitive, width='stretch')
 
-# ====================
-# FOOTER
-# ====================
+        # TAB 3: ML PREDICTOR (Now Auto-Trains)
+        with tab3:
+            st.header("Machine Learning: Predict IC50")
+            st.markdown("A Random Forest model trained on the top correlated genes to predict drug sensitivity.")
+            
+            top_genes = results_df[results_df['Significant']]['Gene'].head(20).tolist()
+            if len(top_genes) < 5: top_genes = results_df['Gene'].head(20).tolist()
+            
+            # Automatically train the model in the background
+            ml_data = merged_df[top_genes + ['IC50']].fillna(merged_df[top_genes].median())
+            model, metrics, pred_df = train_ml_model(ml_data, top_genes)
+            
+            # Display Metrics
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("Cross-Val RÂ² (Mean)", f"{metrics['cv_r2']:.3f}")
+            col_b.metric("Test RÂ²", f"{metrics['test_r2']:.3f}")
+            col_c.metric("Test RMSE", f"{metrics['test_rmse']:.3f}")
+            
+            st.markdown("---")
+            
+            col_ml1, col_ml2 = st.columns(2)
+            
+            with col_ml1:
+                st.subheader("Model Performance: Predicted vs Actual")
+                fig_pred = px.scatter(
+                    pred_df, x='Actual', y='Predicted', 
+                    trendline="ols", trendline_color_override="red",
+                    labels={'Actual': 'Actual LN(IC50)', 'Predicted': 'Predicted LN(IC50)'},
+                    template='plotly_dark', color_discrete_sequence=['#4F8BF9']
+                )
+                fig_pred.update_layout(height=400, margin=dict(l=0, r=0, t=20, b=0))
+                st.plotly_chart(fig_pred, width='stretch')
+
+            with col_ml2:
+                st.subheader("ðŸ”® Interactive Prediction Simulator")
+                st.markdown("Select a cell line to see how the model predicts its sensitivity based on its gene expression.")
+                
+                test_cell = st.selectbox("Select Cell Line", merged_df['Cell_Line'].unique())
+                cell_idx = merged_df[merged_df['Cell_Line'] == test_cell].index[0]
+                actual_val = merged_df.loc[cell_idx, 'IC50']
+                predicted_val = model.predict(merged_df.loc[[cell_idx], top_genes].values)[0]
+                
+                col_sim1, col_sim2 = st.columns(2)
+                col_sim1.metric("Actual LN(IC50)", f"{actual_val:.3f}")
+                col_sim2.metric("Predicted LN(IC50)", f"{predicted_val:.3f}", delta=f"{predicted_val - actual_val:.3f} (Error)")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.info("Note: The model uses 20 highly correlated genes to make this prediction. A perfect RÂ² of 1.0 is impossible in biology due to noise, so an RÂ² of ~0.4-0.6 is considered excellent.")
+
+        # TAB 4: DATA INTEGRITY
+        with tab4:
+            st.header("Pipeline Integrity & Statistics")
+            st.markdown("This project uses **real** GDSC2 data and rigorous statistical methods, not synthetic placeholders.")
+            
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                st.markdown("### Statistical Methodology")
+                st.markdown("""
+                - **Data Source:** GDSC2 (Genomics of Drug Sensitivity in Cancer)
+                - **Feature Extraction:** RNA-seq (RSEM TPM)
+                - **Association Metric:** Pearson Correlation
+                - **Multiple Testing:** Benjamini-Hochberg (FDR)
+                - **ML Algorithm:** Random Forest Regressor
+                - **Validation:** 5-Fold Cross-Validation
+                """)
+            with col_d2:
+                st.markdown("### Top Biomarkers (FDR < 0.05)")
+                sig_genes = results_df[results_df['P_Value_FDR'] < 0.05].sort_values('P_Value_FDR').head(10)
+                if sig_genes.empty:
+                    st.info("No individual gene passed the strict FDR < 0.05 threshold. This is common in high-dimensional biology (41k genes), because the penalty for multiple testing is severe. However, the raw p-values (Volcano Plot) show strong trends.")
+                else:
+                    st.dataframe(sig_genes[['Gene', 'Correlation', 'P_Value_FDR']], width='stretch')
+
+else:
+    st.warning("Data loading failed. Please check your `data/raw/` folder.")
+
+# Footer
 st.markdown("---")
-st.markdown("""
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; color: white;">
-    <h3 style="text-align: center; margin-bottom: 1rem;">?? About This Advanced Dashboard</h3>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px;">
-            <h4>?? Scientific Rigor</h4>
-            <p>Synthetic data mimics real CCLE/GDSC patterns with proper statistical distributions</p>
-        </div>
-        
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px;">
-            <h4>?? ML Integration</h4>
-            <p>Random Forest model predicts drug response with interpretable feature importance</p>
-        </div>
-        
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px;">
-            <h4>?? Multi-Omics</h4>
-            <p>Integrates gene expression, drug response, and clinical data for holistic analysis</p>
-        </div>
-        
-        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px;">
-            <h4>?? Deployment Ready</h4>
-            <p>Fully compatible with Streamlit Cloud for instant web deployment</p>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-    <div style="text-align: center; margin-top: 2rem;">
-        <p><strong>Advanced Drug Response Prediction System v2.0</strong> • Developed by Freedom Evbakoe Amenaghawon</p>
-        <p>ORCID: 0009-0003-1457-809X • GitHub: @famenaghawon • Email: f.e.amenaghawon@gmail.com • LinkedIn: famenaghawon</p>
-        <p style="color: #666; font-size: 0.9rem;">For research and educational purposes • Precision Oncology Pipeline</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ====================
-# DEPLOYMENT SECTION
-# ====================
-with st.expander("?? Ready to Deploy to Streamlit Cloud?"):
-    st.markdown("""
-    ### Deployment Instructions:
-    
-    1. *Push to GitHub:*
-    bash
-    git add .
-    git commit -m "Advanced drug response dashboard v2.0"
-    git push origin main
-    
-    
-    2. *Deploy to Streamlit Cloud:*
-    - Go to [share.streamlit.io](https://share.streamlit.io)
-    - Click "New app"
-    - Select your repository: blueprint-fx/drug-response-prediction
-    - Main file path: app/dashboard.py
-    - Click "Deploy"
-    
-    3. *Your live app will be at:*
-    https://drug-response-prediction.streamlit.app
-    
-    ### Requirements:
-    - Python 3.8+
-    - All packages in requirements.txt
-    - GitHub account
-    - Streamlit Cloud account (free)
-    """)
-    
-    if st.button("?? Deploy Now", type="primary"):
-        st.balloons()
-        st.success("""
-        Ready for deployment! Follow the steps above to deploy your advanced dashboard.
-        
-        Your app features:
-        • Interactive visualizations
-        • Machine learning predictions
-        • Clinical data integration
-        • Professional design
-        • Mobile responsive
-        """)
-
+st.markdown('<div class="footer">Developed by Freedom Evbakoe Amenaghawon | Real GDSC Data Integration | Powered by Streamlit</div>', unsafe_allow_html=True)

@@ -1,5 +1,5 @@
 ﻿# Python
-_pycache_/
+__pycache__/
 *.py[cod]
 *.class
 *.so
@@ -24,6 +24,7 @@ MANIFEST
 # Virtual Environment
 .venv/
 venv/
+venv-windows/
 ENV/
 env/
 virtualenv/
@@ -49,8 +50,11 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
-# Data files (optional - if you have large data files)
-data/
-*.csv
+# Data Files
+# Ignore the large data files inside the raw folder, but keep the folder itself
+data/raw/*
+!data/raw/.gitkeep
+
+# Ignore large model files
 *.pkl
 *.h5
