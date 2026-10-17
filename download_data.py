@@ -1,19 +1,11 @@
 import os
 import subprocess
 import sys
+import urllib.request
 
 # Define directories
 DATA_DIR = "data/raw"
 os.makedirs(DATA_DIR, exist_ok=True)
-
-def install_gdown():
-    """Ensure gdown is installed to handle Google Drive downloads safely."""
-    try:
-        import gdown
-    except ImportError:
-        print("📦 Installing gdown for Google Drive support...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "gdown"])
-        import gdown
 
 def download_drug_data():
     """Downloads the GDSC2 Excel file directly from the Sanger Institute."""
@@ -25,13 +17,11 @@ def download_drug_data():
         return
         
     print(f"⬇️ Downloading GDSC2 Drug Response Data (22 MB)...")
-    import urllib.request
     urllib.request.urlretrieve(url, dest)
     print(f"✅ Successfully downloaded Drug data.")
 
 def download_expression_data():
     """Downloads the filtered CSV from Google Drive using gdown."""
-    install_gdown()
     import gdown
     
     file_id = "1zrdFIPgWrBeMAbv8XG0KcuTVHBesp5Tc"
@@ -42,7 +32,6 @@ def download_expression_data():
         return
         
     print(f"⬇️ Downloading Expression Data from Google Drive (This may take a minute)...")
-    # gdown handles the virus scan warning automatically
     url = f"https://drive.google.com/uc?id={file_id}"
     
     try:
@@ -50,10 +39,10 @@ def download_expression_data():
         print(f"✅ Successfully downloaded Expression Data.")
     except Exception as e:
         print(f"❌ Failed to download expression data: {e}")
-        print("Please ensure the Google Drive link permissions are set to 'Anyone with the link'.")
+        sys.exit(1) # Force CI to fail if download fails
 
 if __name__ == "__main__":
     print("🚀 Initializing Data Pipeline...")
     download_drug_data()
     download_expression_data()
-    print("🎉 Data pipeline ready! You can now run `streamlit run app/dashboard.py`")
+    print("🎉 Data pipeline ready!")
