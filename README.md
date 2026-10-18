@@ -47,10 +47,10 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
 ### 🔬 Multi-Dimensional Analysis
 
 | Visualization | Purpose | Key Insight |
-|--------------|---------|-------------|
-| <img src="assets/volcano.png" width="250"> | Biomarker Discovery | Identifies significant genes using Pearson correlation with capped Y-axis for visual clarity. |
-| <img src="assets/dose.png" width="250"> | Drug Efficacy | Displays the real LN(IC50) distribution across 900+ cell lines for selected EGFR inhibitors. |
-| <img src="assets/ml.png" width="250"> | Predictive Modeling | Interactive Random Forest simulator showing Predicted vs. Actual IC50 with error margins. |
+| :---: | :--- | :--- |
+| ![Volcano Plot](assets/volcano.png) | **Biomarker Discovery** | Identifies significant genes using Pearson correlation with capped Y-axis for visual clarity. |
+| ![Dose-Response](assets/dose.png) | **Drug Efficacy** | Displays the real LN(IC50) distribution across 900+ cell lines for selected EGFR inhibitors. |
+| ![ML Predictor](assets/ml.png) | **Predictive Modeling** | Interactive Random Forest simulator showing Predicted vs. Actual IC50 with error margins. |
 
 ### 🎯 Key Features
 
