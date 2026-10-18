@@ -1,5 +1,4 @@
-﻿```markdown
-# 💊 Advanced Drug Response Prediction & Multi-Omics Analysis Platform
+﻿# 💊 Advanced Drug Response Prediction & Multi-Omics Analysis Platform
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28.0-red.svg)](https://streamlit.io)
@@ -341,4 +340,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 </p><p align="center">
   <a href="#-advanced-drug-response-prediction--multi-omics-analysis-platform">Back to Top ↑</a>
 </p>
-```

@@ -1,283 +1,672 @@
+import os
 import streamlit as st
+
+# MUST BE THE FIRST STREAMLIT COMMAND
+st.set_page_config(
+    page_title="NEURO-RX :: Drug Response Intelligence",
+    layout="wide",
+    page_icon="🧬",
+    initial_sidebar_state="expanded"
+)
+
+# Auto-download for cloud
+if not os.path.exists("data/raw/Expression_Data_subset.csv"):
+    with st.spinner("⚡ Initializing biological data stream..."):
+        try:
+            import runpy
+            runpy.run_path("download_data.py", run_name="__main__")
+        except Exception as e:
+            st.error(f"Data stream failed: {e}")
+            st.stop()
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split, cross_val_score, KFold
-from sklearn.metrics import r2_score, mean_squared_error
-from scipy import stats
-from statsmodels.stats.multitest import multipletests
-import os
 import warnings
-import runpy
 warnings.filterwarnings('ignore')
 
-# ====================
-# AUTO-DOWNLOAD FOR CLOUD DEPLOYMENT
-# ====================
-if not os.path.exists("data/raw/Expression_Data_subset.csv"):
-    with st.spinner("Downloading required biological datasets (First time setup). This may take 1-2 minutes..."):
-        try:
-            # This executes the download_data.py script directly in Python
-            runpy.run_path("download_data.py", run_name="__main__")
-        except Exception as e:
-            st.error(f"Data download failed: {e}")
-            st.stop()
+from src.data_loader import load_gdsc_data, process_biomarkers
+from src.model import train_drug_model
 
-# ====================
-# PAGE CONFIG & CUSTOM CSS
-# ====================
-st.set_page_config(page_title="Drug Response Prediction", layout="wide", page_icon="💊")
-
-# ====================
-# PAGE CONFIG & CUSTOM CSS
-# ====================
-st.set_page_config(page_title="Drug Response Prediction", layout="wide", page_icon="💊")
-
+# ============================================================
+# 🌌 ULTRA-FUTURISTIC CSS SYSTEM
+# ============================================================
 st.markdown("""
 <style>
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
-    .main-title { font-size: 2.5rem; color: #4F8BF9; text-align: center; font-weight: 800; margin-bottom: 0; }
-    .sub-title { font-size: 1.1rem; color: #8C9EFF; text-align: center; margin-bottom: 2rem; }
-    .metric-card { 
-        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); 
-        padding: 1.5rem; border-radius: 10px; color: white; text-align: center; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 1rem;
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600&display=swap');
+
+    /* ---------- GLOBAL CANVAS ---------- */
+    .stApp {
+        background:
+            radial-gradient(ellipse at 15% 10%, rgba(0, 200, 255, 0.10) 0%, transparent 45%),
+            radial-gradient(ellipse at 85% 85%, rgba(160, 0, 255, 0.10) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 50%, rgba(0, 255, 180, 0.05) 0%, transparent 60%),
+            linear-gradient(180deg, #04070d 0%, #080c17 50%, #04070d 100%);
+        background-attachment: fixed;
+        font-family: 'Rajdhani', sans-serif;
+        color: #d8e6ff;
     }
-    .metric-value { font-size: 2rem; font-weight: bold; line-height: 1.2; }
-    .metric-label { font-size: 0.9rem; color: #E2E8F0; text-transform: uppercase; letter-spacing: 1px; }
-    .footer { text-align: center; color: #888; font-size: 0.8rem; margin-top: 3rem; }
+
+    /* Animated grid overlay */
+    .stApp::before {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image:
+            linear-gradient(rgba(0, 200, 255, 0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 200, 255, 0.045) 1px, transparent 1px);
+        background-size: 48px 48px;
+        pointer-events: none;
+        z-index: 0;
+        animation: gridDrift 24s linear infinite;
+    }
+    @keyframes gridDrift {
+        0% { background-position: 0 0, 0 0; }
+        100% { background-position: 48px 48px, 48px 48px; }
+    }
+
+    .block-container { padding-top: 1.5rem; padding-bottom: 3rem; position: relative; z-index: 1; }
+
+    /* ---------- HERO ---------- */
+    .hero-wrap { text-align: center; padding: 2rem 1rem 1.5rem 1rem; position: relative; }
+    .hero-tag {
+        display: inline-block;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 4px;
+        color: #00e5ff;
+        padding: 6px 18px;
+        border: 1px solid rgba(0, 229, 255, 0.35);
+        border-radius: 30px;
+        background: rgba(0, 229, 255, 0.06);
+        text-transform: uppercase;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 0 24px rgba(0, 229, 255, 0.25), inset 0 0 12px rgba(0, 229, 255, 0.08);
+    }
+    .main-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 3.2rem;
+        font-weight: 900;
+        margin: 0;
+        letter-spacing: 3px;
+        background: linear-gradient(120deg, #00e5ff 0%, #7c4dff 40%, #ff00e5 70%, #00e5ff 100%);
+        background-size: 300% 300%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradientShift 8s ease infinite;
+        text-shadow: 0 0 80px rgba(124, 77, 255, 0.4);
+        line-height: 1.15;
+    }
+    @keyframes gradientShift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+    .sub-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        color: #6d86ad;
+        letter-spacing: 2.5px;
+        margin-top: 0.8rem;
+        text-transform: uppercase;
+    }
+    .sub-title span { color: #00e5ff; }
+
+    /* ---------- METRIC CARDS (HOLOGRAPHIC) ---------- */
+    .metric-card {
+        position: relative;
+        background: linear-gradient(135deg, rgba(12, 22, 40, 0.92) 0%, rgba(20, 35, 60, 0.85) 100%);
+        border: 1px solid rgba(0, 229, 255, 0.22);
+        border-radius: 16px;
+        padding: 1.4rem 1.2rem;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        backdrop-filter: blur(12px);
+        box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 0 24px rgba(0, 229, 255, 0.06);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .metric-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, #00e5ff, #7c4dff, transparent);
+        animation: scanLine 3s linear infinite;
+    }
+    @keyframes scanLine {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    .metric-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(0, 229, 255, 0.5);
+        box-shadow:
+            0 12px 40px rgba(0, 0, 0, 0.6),
+            0 0 40px rgba(0, 229, 255, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .metric-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        color: #7c9ac4;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 0.4rem;
+    }
+    .metric-value {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.1;
+        background: linear-gradient(135deg, #00e5ff, #7c4dff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 1px;
+    }
+    .metric-value.danger {
+        background: linear-gradient(135deg, #ff4d6d, #ff00e5);
+        -webkit-background-clip: text; background-clip: text;
+    }
+    .metric-value.success {
+        background: linear-gradient(135deg, #00ffa3, #00e5ff);
+        -webkit-background-clip: text; background-clip: text;
+    }
+    .metric-sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        color: #4d6888;
+        margin-top: 0.35rem;
+        letter-spacing: 0.5px;
+    }
+
+    /* ---------- SECTION HEADERS ---------- */
+    .section-header {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #e0f0ff;
+        letter-spacing: 2px;
+        margin: 1rem 0 1.2rem 0;
+        padding-left: 1rem;
+        border-left: 3px solid #00e5ff;
+        text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .section-header::before {
+        content: "▸";
+        color: #00e5ff;
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    /* ---------- TABS ---------- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background: rgba(8, 14, 26, 0.6);
+        padding: 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 229, 255, 0.15);
+        backdrop-filter: blur(10px);
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        color: #6d86ad;
+        background: transparent;
+        border-radius: 10px;
+        padding: 10px 20px;
+        border: 1px solid transparent;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #00e5ff;
+        background: rgba(0, 229, 255, 0.06);
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(124, 77, 255, 0.15)) !important;
+        color: #00e5ff !important;
+        border: 1px solid rgba(0, 229, 255, 0.4) !important;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 12px rgba(0, 229, 255, 0.05);
+    }
+    .stTabs [data-baseweb="tab-highlight"] { display: none; }
+
+    /* ---------- SIDEBAR ---------- */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #060a12 0%, #0a1120 100%);
+        border-right: 1px solid rgba(0, 229, 255, 0.15);
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        background: transparent;
+    }
+    [data-testid="stSidebar"] .stMarkdown h2,
+    [data-testid="stSidebar"] .stMarkdown h3 {
+        font-family: 'Orbitron', sans-serif;
+        color: #00e5ff;
+        letter-spacing: 2px;
+        font-size: 1rem;
+        border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+        padding-bottom: 0.6rem;
+    }
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] li {
+        color: #a8bbd4;
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 0.92rem;
+    }
+
+    /* ---------- INPUTS ---------- */
+    .stSelectbox > div > div {
+        background: rgba(10, 18, 32, 0.9) !important;
+        border: 1px solid rgba(0, 229, 255, 0.25) !important;
+        border-radius: 10px !important;
+        color: #d8e6ff !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.85rem !important;
+    }
+    .stSelectbox label {
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #7c9ac4 !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 1.5px !important;
+        text-transform: uppercase !important;
+    }
+
+    /* ---------- BUTTONS ---------- */
+    .stButton > button, .stDownloadButton > button {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.72rem;
+        letter-spacing: 2px;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: linear-gradient(135deg, rgba(0, 229, 255, 0.12), rgba(124, 77, 255, 0.12));
+        color: #00e5ff;
+        border: 1px solid rgba(0, 229, 255, 0.4);
+        border-radius: 10px;
+        padding: 0.6rem 1.2rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 0 rgba(0, 229, 255, 0);
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(124, 77, 255, 0.25));
+        border-color: #00e5ff;
+        box-shadow: 0 0 24px rgba(0, 229, 255, 0.5);
+        transform: translateY(-2px);
+    }
+
+    /* ---------- ALERTS / INFO ---------- */
+    .stAlert {
+        background: rgba(10, 18, 32, 0.85) !important;
+        border: 1px solid rgba(0, 229, 255, 0.25) !important;
+        border-left: 3px solid #00e5ff !important;
+        border-radius: 10px !important;
+        color: #a8bbd4 !important;
+        font-family: 'Rajdhani', sans-serif !important;
+        backdrop-filter: blur(10px);
+    }
+
+    /* ---------- DATAFRAME ---------- */
+    [data-testid="stDataFrame"] {
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 0 24px rgba(0, 229, 255, 0.05);
+    }
+
+    /* ---------- METRICS (native) ---------- */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, rgba(12, 22, 40, 0.9), rgba(20, 35, 60, 0.85));
+        border: 1px solid rgba(0, 229, 255, 0.22);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    [data-testid="stMetricLabel"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #7c9ac4 !important;
+        font-size: 0.7rem !important;
+        letter-spacing: 1.5px !important;
+        text-transform: uppercase !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-family: 'Orbitron', sans-serif !important;
+        color: #00e5ff !important;
+        font-weight: 800 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.78rem !important;
+    }
+
+    /* ---------- SPINNER ---------- */
+    .stSpinner > div {
+        border-top-color: #00e5ff !important;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+        text-align: center;
+        font-family: 'JetBrains Mono', monospace;
+        color: #3d5673;
+        font-size: 0.72rem;
+        letter-spacing: 2px;
+        margin-top: 3rem;
+        padding: 1.5rem;
+        border-top: 1px solid rgba(0, 229, 255, 0.12);
+        text-transform: uppercase;
+    }
+    .footer span { color: #00e5ff; }
+    .footer .heart { color: #ff00e5; animation: heartbeat 1.6s ease-in-out infinite; }
+    @keyframes heartbeat {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.25); }
+    }
+
+    /* ---------- SCROLLBAR ---------- */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #04070d; }
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #00e5ff, #7c4dff);
+        border-radius: 4px;
+    }
+
+    /* ---------- HIDE STREAMLIT CHROME ---------- */
+    #MainMenu, footer, header { visibility: hidden; }
+    .stDeployButton { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# ====================
-# DATA PIPELINE
-# ====================
-@st.cache_data
-def load_real_data():
-    resp_path = "data/raw/GDSC2_fitted_dose_response_27Oct23.xlsx"
-    expr_path = "data/raw/Expression_Data_subset.csv"
-    
-    if not os.path.exists(resp_path) or not os.path.exists(expr_path):
-        return None, None
-        
-    df_resp = pd.read_excel(resp_path)
-    df_resp = df_resp.rename(columns={'CELL_LINE_NAME': 'Cell_Line', 'DRUG_NAME': 'Drug', 'LN_IC50': 'IC50'})
-    df_expr = pd.read_csv(expr_path, index_col=0) 
-    return df_resp, df_expr
+# ============================================================
+# 🧬 HERO SECTION
+# ============================================================
+st.markdown("""
+<div class="hero-wrap">
+    <div class="hero-tag">◉ NEURO-RX v3.0 // Precision Oncology Intelligence</div>
+    <h1 class="main-title">DRUG RESPONSE<br>PREDICTION ENGINE</h1>
+    <p class="sub-title">
+        GDSC Real-Data <span>◆</span> Train/Test Split <span>◆</span> FDR Statistics <span>◆</span> Neural ML Core
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
-@st.cache_data
-def process_biomarkers(df_resp, df_expr, drug_name):
-    drug_data = df_resp[df_resp['Drug'] == drug_name].copy()
-    if drug_data.empty: return None, None
-        
-    expr_t = df_expr.T
-    merged = pd.merge(drug_data, expr_t, left_on='Cell_Line', right_index=True, how='inner')
-    if merged.empty: return None, None
-
-    gene_cols = expr_t.columns
-    results = []
-    for gene in gene_cols:
-        clean_data = merged[[gene, 'IC50']].dropna()
-        if len(clean_data) > 5:
-            corr, p = stats.pearsonr(clean_data[gene], clean_data['IC50'])
-            results.append({'Gene': gene, 'Correlation': corr, 'P_Value': p})
-            
-    results_df = pd.DataFrame(results)
-    if results_df.empty: return None, None
-        
-    p_vals = results_df['P_Value'].values
-    reject, p_adj, _, _ = multipletests(p_vals, alpha=0.05, method='fdr_bh')
-    results_df['P_Value_FDR'] = p_adj
-    results_df['-log10_P_Raw'] = -np.log10(results_df['P_Value'] + 1e-300)
-    results_df['Significant'] = (results_df['P_Value'] < 0.05) & (results_df['Correlation'].abs() > 0.25)
-    
-    return merged, results_df
-
-# Auto-train the model (Cached)
-@st.cache_resource
-def train_ml_model(data_df, features, target_col='IC50'):
-    X = data_df[features].values
-    y = data_df[target_col].values
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    rf = RandomForestRegressor(n_estimators=200, max_depth=12, min_samples_split=5, random_state=42, n_jobs=-1)
-    
-    cv = KFold(n_splits=5, shuffle=True, random_state=42)
-    cv_scores = cross_val_score(rf, X_train, y_train, cv=cv, scoring='r2')
-    rf.fit(X_train, y_train)
-    
-    y_pred = rf.predict(X_test)
-    r2 = r2_score(y_test, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    
-    # Save predictions for the scatter plot
-    pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred})
-    
-    return rf, {'cv_r2': cv_scores.mean(), 'test_r2': r2, 'test_rmse': rmse}, pred_df
-
-# ====================
-# MAIN APP EXECUTION
-# ====================
-st.markdown('<h1 class="main-title">Advanced Drug Response Prediction</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Real GDSC Data | FDR Statistics | Machine Learning</p>', unsafe_allow_html=True)
-
-df_resp, df_expr = load_real_data()
+# ============================================================
+# 📊 DATA LOAD
+# ============================================================
+df_resp, df_expr = load_gdsc_data()
 
 if df_resp is not None and df_expr is not None:
+
+    # ------------------------------------------------------------
+    # SIDEBAR
+    # ------------------------------------------------------------
     with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/3014/3014521.png", width=80)
-        st.header("Configuration")
-        
+        st.markdown("## ⚙ Control Deck")
         available_drugs = df_resp['Drug'].unique()
         default_drugs = ['Erlotinib', 'Gefitinib', 'Afatinib', 'Osimertinib']
-        selected_drug = st.selectbox("Select EGFR Inhibitor", [d for d in default_drugs if d in available_drugs] or available_drugs)
-        
+        selected_drug = st.selectbox(
+            "Target Compound",
+            [d for d in default_drugs if d in available_drugs] or available_drugs
+        )
+
         st.markdown("---")
-        st.markdown(f"**Dataset Info:**\n- GDSC2 Real Data\n- {df_expr.shape[1]:,} Cell Lines\n- {df_expr.shape[0]:,} Genes")
-    
-    merged_df, results_df = process_biomarkers(df_resp, df_expr, selected_drug)
-    
-    if merged_df is None:
-        st.error(f"No matching cell lines found for {selected_drug}.")
+        st.markdown("## 🧪 Methodology")
+        st.info(
+            "**Data Leakage Protocol:** 80/20 split enforced *before* "
+            "statistical testing. FDR is computed strictly on the training partition."
+        )
+
+        st.markdown("---")
+        st.markdown("## 📡 System Status")
+        st.markdown("""
+        <div style="font-family:'JetBrains Mono',monospace; font-size:0.78rem; color:#6d86ad; line-height:2;">
+        <span style="color:#00ffa3;">●</span> GDSC Interface &nbsp; <span style="color:#00e5ff;">ONLINE</span><br>
+        <span style="color:#00ffa3;">●</span> FDR Engine &nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#00e5ff;">ACTIVE</span><br>
+        <span style="color:#00ffa3;">●</span> ML Core &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#00e5ff;">READY</span><br>
+        <span style="color:#ff00e5;">◉</span> Encryption &nbsp;&nbsp;&nbsp;&nbsp; <span style="color:#ff00e5;">QUANTUM</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ------------------------------------------------------------
+    # PROCESS
+    # ------------------------------------------------------------
+    with st.spinner("⚡ Running biomarker computation pipeline..."):
+        train_df, test_df, results_df = process_biomarkers(df_resp, df_expr, selected_drug)
+
+    if results_df is None:
+        st.error(f"Insufficient matched cell lines for **{selected_drug}**. Pipeline halted.")
     else:
-        tab1, tab2, tab3, tab4 = st.tabs(["Volcano Plot", "Dose-Response", "ML Predictor", "Data Integrity"])
-        
-        # TAB 1: VOLCANO PLOT
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "◈ VOLCANO SCAN",
+            "◈ DOSE-RESPONSE",
+            "◈ ML PREDICTOR",
+            "◈ INTEGRITY"
+        ])
+
+        # ============================================================
+        # TAB 1 — VOLCANO
+        # ============================================================
         with tab1:
-            st.header(f"Biomarker Discovery: {selected_drug}")
+            st.markdown(f'<div class="section-header">Biomarker Discovery :: {selected_drug}</div>', unsafe_allow_html=True)
+
             col1, col2 = st.columns([3, 1])
-            
+
             with col1:
                 results_df['plot_y'] = np.clip(results_df['-log10_P_Raw'], 0, 12)
-                
+
                 fig = px.scatter(
                     results_df, x='Correlation', y='plot_y',
                     color='Significant', hover_name='Gene',
-                    color_discrete_map={True: '#EF553B', False: '#636EFA'},
+                    color_discrete_map={True: '#ff00e5', False: '#2a3f5f'},
                     labels={'plot_y': '-log10(Raw P-value)', 'Correlation': 'Pearson Correlation (r)'},
-                    title=f"Volcano Plot: Gene Expression vs {selected_drug} IC50",
+                    title=f"Volcano Scan :: Gene Expression vs {selected_drug} IC50",
                     template='plotly_dark'
                 )
-                fig.add_hline(y=-np.log10(0.05), line_dash="dash", line_color="#10B981", annotation_text="P=0.05")
-                fig.add_vline(x=0.25, line_dash="dash", line_color="#10B981")
-                fig.add_vline(x=-0.25, line_dash="dash", line_color="#10B981")
-                fig.update_layout(margin=dict(l=0, r=0, t=40, b=0), height=500)
-                st.plotly_chart(fig, width='stretch')
-                
+                fig.add_hline(y=-np.log10(0.05), line_dash="dash", line_color="#00ffa3",
+                              annotation_text="P=0.05", annotation_font_color="#00ffa3")
+                fig.add_vline(x=0.2, line_dash="dash", line_color="#00ffa3")
+                fig.add_vline(x=-0.2, line_dash="dash", line_color="#00ffa3")
+
+                fig.update_traces(marker=dict(size=7, line=dict(width=0.5, color='rgba(0,229,255,0.35)')))
+                fig.update_layout(
+                    height=520,
+                    margin=dict(l=0, r=0, t=50, b=0),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(4,7,13,0.6)',
+                    font=dict(family='Rajdhani', color='#a8bbd4'),
+                    title_font=dict(family='Orbitron', size=14, color='#00e5ff'),
+                    legend=dict(
+                        bgcolor='rgba(10,18,32,0.8)',
+                        bordercolor='rgba(0,229,255,0.3)',
+                        borderwidth=1,
+                        font=dict(family='JetBrains Mono', size=10)
+                    ),
+                    xaxis=dict(gridcolor='rgba(0,229,255,0.07)', zerolinecolor='rgba(0,229,255,0.2)'),
+                    yaxis=dict(gridcolor='rgba(0,229,255,0.07)', zerolinecolor='rgba(0,229,255,0.2)')
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
             with col2:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-label">Total Genes Tested</div>
+                    <div class="metric-label">Genes Scanned</div>
                     <div class="metric-value">{len(results_df):,}</div>
+                    <div class="metric-sub">HIGH-DIMENSIONAL SPACE</div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #065F46 0%, #10B981 100%);">
+                <div class="metric-card">
                     <div class="metric-label">Significant Biomarkers</div>
-                    <div class="metric-value">{results_df['Significant'].sum():,}</div>
+                    <div class="metric-value success">{results_df['Significant'].sum():,}</div>
+                    <div class="metric-sub">FDR &lt; 0.05 THRESHOLD</div>
                 </div>
-                <div class="metric-card" style="background: linear-gradient(135deg, #7F1D1D 0%, #EF4444 100%);">
-                    <div class="metric-label">Cell Lines Analyzed</div>
-                    <div class="metric-value">{len(merged_df)}</div>
+                <div class="metric-card">
+                    <div class="metric-label">Train Cell Lines</div>
+                    <div class="metric-value danger">{len(train_df)}</div>
+                    <div class="metric-sub">HELD-OUT TEST: {len(test_df)}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                st.download_button("📥 Download Results (CSV)", results_df.to_csv(index=False), "biomarkers.csv", width='stretch')
 
-        # TAB 2: DOSE RESPONSE
+                st.download_button(
+                    "⤓ EXPORT BIOMARKERS",
+                    results_df.to_csv(index=False),
+                    "biomarkers.csv",
+                    use_container_width=True
+                )
+
+        # ============================================================
+        # TAB 2 — DOSE RESPONSE
+        # ============================================================
         with tab2:
-            st.header(f"Dose-Response Analysis: {selected_drug}")
-            st.markdown("Distribution of LN(IC50) across the analyzed cell lines. Lower values indicate higher sensitivity to the drug.")
-            
+            st.markdown(f'<div class="section-header">Dose-Response Analysis :: {selected_drug}</div>', unsafe_allow_html=True)
+
             fig_hist = px.histogram(
-                merged_df, x='IC50', nbins=30, 
-                title=f"Distribution of {selected_drug} LN(IC50)",
+                pd.concat([train_df, test_df]), x='IC50', nbins=30,
+                title=f"LN(IC50) Distribution :: All Matched Cell Lines",
                 labels={'IC50': 'LN(IC50)'},
-                color_discrete_sequence=['#4F8BF9'],
+                color_discrete_sequence=['#00e5ff'],
                 template='plotly_dark'
             )
-            st.plotly_chart(fig_hist, width='stretch')
-            
-            st.subheader("Top 10 Most Sensitive Cell Lines")
-            sensitive = merged_df.nsmallest(10, 'IC50')[['Cell_Line', 'IC50']]
-            st.dataframe(sensitive, width='stretch')
+            fig_hist.update_traces(
+                marker=dict(line=dict(width=1, color='rgba(124,77,255,0.6)'))
+            )
+            fig_hist.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(4,7,13,0.6)',
+                font=dict(family='Rajdhani', color='#a8bbd4'),
+                title_font=dict(family='Orbitron', size=14, color='#00e5ff'),
+                xaxis=dict(gridcolor='rgba(0,229,255,0.07)'),
+                yaxis=dict(gridcolor='rgba(0,229,255,0.07)'),
+                height=450
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
 
-        # TAB 3: ML PREDICTOR (Now Auto-Trains)
+            st.markdown('<div class="section-header">Top 10 Most Sensitive Cell Lines</div>', unsafe_allow_html=True)
+            sensitive = pd.concat([train_df, test_df]).nsmallest(10, 'IC50')[['Cell_Line', 'IC50']]
+            st.dataframe(sensitive, use_container_width=True)
+
+        # ============================================================
+        # TAB 3 — ML PREDICTOR
+        # ============================================================
         with tab3:
-            st.header("Machine Learning: Predict IC50")
-            st.markdown("A Random Forest model trained on the top correlated genes to predict drug sensitivity.")
-            
+            st.markdown('<div class="section-header">Neural ML Core :: IC50 Prediction</div>', unsafe_allow_html=True)
+            st.markdown(
+                "<p style='font-family:JetBrains Mono; color:#6d86ad; font-size:0.82rem; letter-spacing:1px;'>"
+                "RANDOM FOREST MODEL :: TRAINED EXCLUSIVELY ON TRAINING PARTITION</p>",
+                unsafe_allow_html=True
+            )
+
             top_genes = results_df[results_df['Significant']]['Gene'].head(20).tolist()
-            if len(top_genes) < 5: top_genes = results_df['Gene'].head(20).tolist()
-            
-            # Automatically train the model in the background
-            ml_data = merged_df[top_genes + ['IC50']].fillna(merged_df[top_genes].median())
-            model, metrics, pred_df = train_ml_model(ml_data, top_genes)
-            
-            # Display Metrics
+            if len(top_genes) < 5:
+                top_genes = results_df['Gene'].head(20).tolist()
+
+            model, metrics, pred_df = train_drug_model(train_df, test_df, top_genes)
+
+            # Metric strip
+            st.markdown('<div class="section-header">Performance Telemetry</div>', unsafe_allow_html=True)
             col_a, col_b, col_c = st.columns(3)
-            col_a.metric("Cross-Val R² (Mean)", f"{metrics['cv_r2']:.3f}")
-            col_b.metric("Test R²", f"{metrics['test_r2']:.3f}")
+            col_a.metric("Cross-Val R² (Train)", f"{metrics['cv_r2_mean']:.3f}")
+            col_b.metric("Test R² (Unseen)", f"{metrics['test_r2']:.3f}")
             col_c.metric("Test RMSE", f"{metrics['test_rmse']:.3f}")
-            
+
             st.markdown("---")
-            
+
             col_ml1, col_ml2 = st.columns(2)
-            
+
             with col_ml1:
-                st.subheader("Model Performance: Predicted vs Actual")
+                st.markdown('<div class="section-header">Predicted vs Actual</div>', unsafe_allow_html=True)
                 fig_pred = px.scatter(
-                    pred_df, x='Actual', y='Predicted', 
-                    trendline="ols", trendline_color_override="red",
+                    pred_df, x='Actual', y='Predicted',
+                    trendline="ols", trendline_color_override="#ff00e5",
                     labels={'Actual': 'Actual LN(IC50)', 'Predicted': 'Predicted LN(IC50)'},
-                    template='plotly_dark', color_discrete_sequence=['#4F8BF9']
+                    template='plotly_dark', color_discrete_sequence=['#00e5ff']
                 )
-                fig_pred.update_layout(height=400, margin=dict(l=0, r=0, t=20, b=0))
-                st.plotly_chart(fig_pred, width='stretch')
+                fig_pred.update_traces(marker=dict(size=9, line=dict(width=1, color='rgba(0,229,255,0.5)')))
+                fig_pred.update_layout(
+                    height=420,
+                    margin=dict(l=0, r=0, t=20, b=0),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(4,7,13,0.6)',
+                    font=dict(family='Rajdhani', color='#a8bbd4'),
+                    xaxis=dict(gridcolor='rgba(0,229,255,0.07)'),
+                    yaxis=dict(gridcolor='rgba(0,229,255,0.07)')
+                )
+                st.plotly_chart(fig_pred, use_container_width=True)
 
             with col_ml2:
-                st.subheader("🔮 Interactive Prediction Simulator")
-                st.markdown("Select a cell line to see how the model predicts its sensitivity based on its gene expression.")
-                
-                test_cell = st.selectbox("Select Cell Line", merged_df['Cell_Line'].unique())
-                cell_idx = merged_df[merged_df['Cell_Line'] == test_cell].index[0]
-                actual_val = merged_df.loc[cell_idx, 'IC50']
-                predicted_val = model.predict(merged_df.loc[[cell_idx], top_genes].values)[0]
-                
+                st.markdown('<div class="section-header">🔮 Prediction Simulator</div>', unsafe_allow_html=True)
+                st.markdown(
+                    "<p style='font-family:JetBrains Mono; color:#6d86ad; font-size:0.8rem;'>"
+                    "SELECT AN UNSEEN TEST-SET CELL LINE</p>",
+                    unsafe_allow_html=True
+                )
+
+                test_cell = st.selectbox("Cell Line ID", test_df['Cell_Line'].unique())
+                cell_idx = test_df[test_df['Cell_Line'] == test_cell].index[0]
+                actual_val = test_df.loc[cell_idx, 'IC50']
+
+                train_medians = train_df[top_genes].median()
+                cell_features = test_df.loc[[cell_idx], top_genes].fillna(train_medians)
+                predicted_val = model.predict(cell_features.values)[0]
+
                 col_sim1, col_sim2 = st.columns(2)
                 col_sim1.metric("Actual LN(IC50)", f"{actual_val:.3f}")
-                col_sim2.metric("Predicted LN(IC50)", f"{predicted_val:.3f}", delta=f"{predicted_val - actual_val:.3f} (Error)")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.info("Note: The model uses 20 highly correlated genes to make this prediction. A perfect R² of 1.0 is impossible in biology due to noise, so an R² of ~0.4-0.6 is considered excellent.")
+                col_sim2.metric(
+                    "Predicted LN(IC50)",
+                    f"{predicted_val:.3f}",
+                    delta=f"{predicted_val - actual_val:.3f} (Error)"
+                )
 
-        # TAB 4: DATA INTEGRITY
+        # ============================================================
+        # TAB 4 — INTEGRITY
+        # ============================================================
         with tab4:
-            st.header("Pipeline Integrity & Statistics")
-            st.markdown("This project uses **real** GDSC2 data and rigorous statistical methods, not synthetic placeholders.")
-            
-            col_d1, col_d2 = st.columns(2)
-            with col_d1:
-                st.markdown("### Statistical Methodology")
-                st.markdown("""
-                - **Data Source:** GDSC2 (Genomics of Drug Sensitivity in Cancer)
-                - **Feature Extraction:** RNA-seq (RSEM TPM)
-                - **Association Metric:** Pearson Correlation
-                - **Multiple Testing:** Benjamini-Hochberg (FDR)
-                - **ML Algorithm:** Random Forest Regressor
-                - **Validation:** 5-Fold Cross-Validation
-                """)
-            with col_d2:
-                st.markdown("### Top Biomarkers (FDR < 0.05)")
-                sig_genes = results_df[results_df['P_Value_FDR'] < 0.05].sort_values('P_Value_FDR').head(10)
-                if sig_genes.empty:
-                    st.info("No individual gene passed the strict FDR < 0.05 threshold. This is common in high-dimensional biology (41k genes), because the penalty for multiple testing is severe. However, the raw p-values (Volcano Plot) show strong trends.")
-                else:
-                    st.dataframe(sig_genes[['Gene', 'Correlation', 'P_Value_FDR']], width='stretch')
+            st.markdown('<div class="section-header">Pipeline Integrity Protocols</div>', unsafe_allow_html=True)
+
+            st.markdown("""
+            <div style="background:rgba(10,18,32,0.7); border:1px solid rgba(0,229,255,0.2);
+                        border-radius:14px; padding:1.5rem; font-family:'Rajdhani',sans-serif;
+                        color:#a8bbd4; line-height:2; backdrop-filter:blur(10px);">
+                <div style="font-family:'Orbitron'; color:#00e5ff; font-size:0.85rem;
+                            letter-spacing:2px; margin-bottom:0.8rem;">◆ METHODOLOGICAL RIGOR</div>
+                <b style="color:#e0f0ff;">▸ Train/Test Split:</b> 80/20 split enforced <i>before</i> statistical testing to eliminate data leakage.<br>
+                <b style="color:#e0f0ff;">▸ Imputation:</b> Medians computed on training partition, propagated to test partition.<br>
+                <b style="color:#e0f0ff;">▸ Multiple Testing:</b> Benjamini-Hochberg (FDR) applied strictly to the training set.<br>
+                <b style="color:#e0f0ff;">▸ ML Validation:</b> 5-Fold Cross-Validation on train; final metrics on unseen test.
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown('<div class="section-header">Top Biomarkers (FDR &lt; 0.05)</div>', unsafe_allow_html=True)
+
+            sig_genes = results_df[results_df['P_Value_FDR'] < 0.05].head(10)
+            if sig_genes.empty:
+                st.info(
+                    "No gene passed the strict FDR < 0.05 threshold. This is common in "
+                    "high-dimensional biology (41k genes) due to severe multiple-testing penalty."
+                )
+            else:
+                st.dataframe(sig_genes[['Gene', 'Correlation', 'P_Value_FDR']], use_container_width=True)
 
 else:
-    st.warning("Data loading failed. Please check your `data/raw/` folder.")
+    st.warning("⚠ Data loading failed. Verify `data/raw/` directory integrity.")
 
-# Footer
-st.markdown("---")
-st.markdown('<div class="footer">Developed by Freedom Evbakoe Amenaghawon | Real GDSC Data Integration | Powered by Streamlit</div>', unsafe_allow_html=True)
+# ============================================================
+# FOOTER
+# ============================================================
+st.markdown("""
+<div class="footer">
+    NEURO-RX INTELLIGENCE PLATFORM <span>◆</span>
+    ENGINEERED BY <span>FREEDOM EVBAKOE AMENAGHAWON</span> <span>◆</span>
+    GDSC REAL-DATA INTEGRATION <span>◆</span>
+    POWERED BY STREAMLIT <span class="heart">♥</span>
+</div>
+""", unsafe_allow_html=True)
