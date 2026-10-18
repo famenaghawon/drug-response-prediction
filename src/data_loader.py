@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import streamlit as st
 import os
 from scipy import stats
@@ -9,7 +10,7 @@ DATA_DIR = "data/raw"
 
 @st.cache_data(show_spinner="⚡ Streaming gene expression data (Parquet)...")
 def fetch_expression_data():
-    # Make sure this is the /resolve/ URL to the .parquet file!
+    
     url = "https://huggingface.co/datasets/famenaghawon/drug-response-data/resolve/main/Expression_Data.parquet"
     try:
         df_expr = pd.read_parquet(url)
@@ -27,8 +28,7 @@ def load_gdsc_data():
         if os.path.exists(response_file):
             df_resp = pd.read_excel(response_file)
         else:
-            # If response data isn't committed, you MUST host it too. 
-            # Assuming it's small enough to commit to GitHub.
+            
             st.error("Response data file missing!")
             return None, None
             
@@ -58,15 +58,15 @@ def load_gdsc_data():
         if os.path.exists(response_file):
             df_resp = pd.read_excel(response_file)
         else:
-            # Fallback URL for response data (replace with actual URL if needed)
+            
             st.warning(f"Local response file not found at {response_file}. Attempting fallback...")
             return None, None
             
         df_resp = df_resp.rename(columns={'CELL_LINE_NAME': 'Cell_Line', 'DRUG_NAME': 'Drug', 'LN_IC50': 'IC50'})
        
-        # 2. Load Expression Data (Massive 230MB file)
+        
         if os.path.exists(expr_file):
-            # If running locally and file exists, use local (faster)
+            
             df_expr = pd.read_csv(expr_file, index_col=0)
         else:
             # If on Streamlit Cloud (or file missing), stream from Hugging Face
@@ -98,17 +98,17 @@ def process_biomarkers(df_resp, df_expr, drug_name, test_size=0.2):
     if len(merged) < 10:
         return None, None, None
 
-    # 1. SPLIT FIRST (Crucial for preventing data leakage)
+    
     train_df, test_df = train_test_split(merged, test_size=test_size, random_state=42)
    
-    # 2. Calculate stats ONLY on training data
+    
     gene_cols = expr_t.columns
-    # Optional: filter to ensure we only test valid gene columns
+    
     gene_cols = [col for col in gene_cols if col in train_df.columns]
     
     results = []
     
-    # Using a faster loop for 41k genes
+    
     for gene in gene_cols:
         clean_train = train_df[[gene, 'IC50']].dropna()
         # Require at least 5 samples and non-zero variance
@@ -119,16 +119,16 @@ def process_biomarkers(df_resp, df_expr, drug_name, test_size=0.2):
     results_df = pd.DataFrame(results)
     if results_df.empty: return train_df, test_df, None
        
-    # 3. FDR Correction
+    
     p_vals = results_df['P_Value'].values
     reject, p_adj, _, _ = multipletests(p_vals, alpha=0.05, method='fdr_bh')
     results_df['P_Value_FDR'] = p_adj
     results_df['-log10_P_Raw'] = -np.log10(results_df['P_Value'] + 1e-300)
    
-    # 4. Define Significance using FDR
+    
     results_df['Significant'] = (results_df['P_Value_FDR'] < 0.05) & (results_df['Correlation'].abs() > 0.2)
    
-    # 5. Sort by FDR for ML feature selection
+    
     results_df = results_df.sort_values('P_Value_FDR')
    
     return train_df, test_df, results_df
