@@ -17,29 +17,19 @@
   <em>A production-grade computational biology dashboard for precision oncology</em>
 </p>
 
-This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real multi-omics data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (LN_IC50) across hundreds of cancer cell lines. 
+This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real multi-omics data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (LN_IC50) across hundreds of cancer cell lines.
 
-Unlike standard tutorials, this project demonstrates the ability to handle **large-scale, real-world data** (a raw 6GB RNA-seq matrix) and apply rigorous statistical methodologies to extract biological meaning without data leakage.
-
----
+Unlike standard tutorials, this project demonstrates the ability to handle **large-scale, real-world data** — from the full GDSC2 RNA-seq matrix (6 GB uncompressed) down to a compressed 91 MB Parquet subset — and apply rigorous statistical methodologies to extract biological meaning without data leakage.
 
 ## 🚀 Live Demo
 
-<p align="center">
-  <a href="https://drug-response-prediction.streamlit.app">
-    <img src="https://img.shields.io/badge/🌐_Live_Demo-Click_Here-FF4B4B?style=for-the-badge&logo=streamlit" alt="Live Demo">
-  </a>
-</p>
-
-Live App: [https://drug-response-prediction.streamlit.app](https://drug-response-prediction.streamlit.app)
+**Live App:** [https://drug-response-prediction.streamlit.app](https://drug-response-prediction.streamlit.app)
 
 <p align="center">
   <img src="assets/dashboard.png" alt="Dashboard Screenshot" width="800">
   <br>
   <em>Interactive NEURO-RX dashboard with real GDSC data</em>
 </p>
-
----
 
 ## 📊 Interactive Visualizations
 
@@ -57,31 +47,29 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
   <table>
     <tr>
       <td align="center" width="33%">
-        <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="60" alt="Machine Learning">
+        <img src="https://cdn-icons-png.flaticon.com/512/2920/2920244.png" width="60" alt="Machine Learning">
         <br>
         <strong>Zero-Trust ML Pipeline</strong>
         <br>
         Data split 80/20 before testing to prevent leakage
       </td>
       <td align="center" width="33%">
-        <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="60" alt="Visualization">
+        <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" width="60" alt="Statistical Rigor">
         <br>
         <strong>Statistical Rigor</strong>
         <br>
         Benjamini-Hochberg FDR Correction
       </td>
       <td align="center" width="33%">
-        <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="60" alt="Deployment">
+        <img src="https://cdn-icons-png.flaticon.com/512/3256/3256082.png" width="60" alt="Cloud Deployment">
         <br>
         <strong>Cloud-Native Streaming</strong>
         <br>
-        Hugging Face Parquet integration (91MB)
+        Hugging Face Parquet integration (91 MB)
       </td>
     </tr>
   </table>
 </div>
-
----
 
 ## 🛠 Technical Implementation
 
@@ -89,9 +77,9 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
 
 This project does not use synthetic placeholders. It connects directly to the **GDSC2** dataset (Genomics of Drug Sensitivity in Cancer).
 
-**The Cloud Challenge:** The raw RNA-seq matrix is over 230MB. GitHub blocks files >100MB, and Streamlit Cloud times out if forced to download huge CSVs on boot.
+**The Cloud Challenge:** The raw GDSC2 RNA-seq matrix is over **6 GB uncompressed** (the filtered, analysis-ready subset used by the app is ~230 MB). GitHub blocks files >100 MB, and Streamlit Cloud times out if forced to download huge CSVs on boot.
 
-**The Solution:** The CSV was converted to a highly compressed **Parquet** format (91MB) and is hosted on the Hugging Face Hub. The app uses `pandas.read_parquet()` to stream the data directly into memory during app startup.
+**The Solution:** The analysis-ready CSV was converted to a highly compressed **Parquet** format (**91 MB**) and is hosted on the Hugging Face Hub. The app uses `pandas.read_parquet()` to stream the data directly into memory during app startup.
 
 ```python
 # Stream directly from Hugging Face Hub
@@ -99,18 +87,16 @@ url = "https://huggingface.co/datasets/famenaghawon/drug-response-data/resolve/m
 df_expr = pd.read_parquet(url)
 ```
 
-📈 Advanced Data Pipeline
+### 📈 Advanced Data Pipeline
 
-· Train/Test Split: 80/20 split performed before any statistical testing.
-· Imputation: Medians calculated exclusively on the training set and applied to the test set.
-· Multiple Testing: Benjamini-Hochberg (FDR) applied strictly to the training set.
-· Machine Learning: Random Forest Regressor validated using 5-Fold Cross-Validation.
+- **Train/Test Split:** 80/20 split performed before any statistical testing.
+- **Imputation:** Medians calculated exclusively on the training set and applied to the test set.
+- **Multiple Testing:** Benjamini-Hochberg (FDR) applied strictly to the training set.
+- **Machine Learning:** Random Forest Regressor validated using 5-Fold Cross-Validation.
 
----
+## 🚀 Quick Start (Local Development)
 
-🚀 Quick Start (Local Development)
-
-📦 Installation & Data Fetching
+### 📦 Installation & Data Fetching
 
 ```bash
 # Clone repository
@@ -120,19 +106,21 @@ cd drug-response-prediction
 # Create virtual environment
 python -m venv .venv
 
-# Activate on Windows:
+# Activate on Windows (PowerShell):
 .venv\Scripts\Activate.ps1
+# Activate on Windows (cmd):
+# .venv\Scripts\activate.bat
 # Activate on macOS/Linux:
 # source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Fetch the required datasets (Optional for local fallback)
+# Fetch the required datasets (optional — used for local fallback only)
 python download_data.py
 ```
 
-🎮 Run Locally
+### 🎮 Run Locally
 
 ```bash
 # Launch the dashboard
@@ -141,9 +129,14 @@ streamlit run app/dashboard.py
 # Open browser at: http://localhost:8501
 ```
 
----
+### 🧪 Run Tests
 
-📁 Project Structure
+```bash
+# Run the Pytest suite
+pytest tests/
+```
+
+## 📁 Project Structure
 
 ```text
 drug-response-prediction/
@@ -163,86 +156,64 @@ drug-response-prediction/
 └── .gitignore                # Git exclusion rules
 ```
 
----
-
-🔬 Scientific Relevance
+## 🔬 Scientific Relevance
 
 This project demonstrates computational approaches for:
 
-<div align="center">
-  <table>
-    <tr>
-      <td><strong>Precision Oncology</strong></td>
-      <td>Identifying patient-specific drug sensitivities using real genomic profiles</td>
-    </tr>
-    <tr>
-      <td><strong>Biomarker Discovery</strong></td>
-      <td>Applying FDR correction to find true genetic predictors of treatment response</td>
-    </tr>
-    <tr>
-      <td><strong>Drug Repurposing</strong></td>
-      <td>Analyzing efficacy across 900+ cancer cell lines for EGFR inhibitors</td>
-    </tr>
-    <tr>
-      <td><strong>Scalable ML</strong></td>
-      <td>Building robust predictors that handle high-dimensional biological noise</td>
-    </tr>
-  </table>
-</div>
+| Area | Description |
+| :--- | :--- |
+| **Precision Oncology** | Identifying patient-specific drug sensitivities using real genomic profiles |
+| **Biomarker Discovery** | Applying FDR correction to find true genetic predictors of treatment response |
+| **Drug Repurposing** | Analyzing efficacy across 900+ cancer cell lines for EGFR inhibitors |
+| **Scalable ML** | Building robust predictors that handle high-dimensional biological noise |
 
-📈 Results & Insights (Honest Metrics)
+## 📈 Results & Insights (Honest Metrics)
 
-🏆 Key Findings (Real Data)
+### 🏆 Key Findings (Real Data)
 
-1. Biomarker Discovery: Out of 37,215 genes scanned, significant biomarkers were identified using strict FDR correction.
-2. Model Performance: The model successfully captures biological signal without overfitting.
-   · Cross-Val R² (Train): 0.181
-   · Test R² (Unseen): 0.115
-   · Test RMSE: 1.139
+1. **Biomarker Discovery:** Out of 37,215 genes scanned, significant biomarkers were identified using strict FDR correction.
+2. **Model Performance:** The model successfully captures biological signal without overfitting.
+   - Cross-Val R² (Train): **0.181**
+   - Test R² (Unseen): **0.115**
+   - Test RMSE: **1.139** (in LN_IC50 units)
 
-(Scientific Note: An R² of ~0.11-0.18 is highly realistic and consistent with state-of-the-art literature for single-omics drug response prediction. Predicting IC50 from gene expression alone is notoriously difficult due to the polygenic nature of drug resistance and high biological noise).
+> **Scientific Note:** An R² of ~0.11–0.18 is highly realistic and consistent with state-of-the-art literature for single-omics drug response prediction. Predicting IC50 from gene expression alone is notoriously difficult due to the polygenic nature of drug resistance and high biological noise.
 
-📊 Model Details
+### 📊 Model Details
 
-Machine Learning Model:
+**Machine Learning Model:**
 
-· Algorithm: Random Forest Regressor
-· Validation: 5-Fold Cross-Validation
-· Target: LN(IC50)
-· Features: Top 20 Correlated Genes (from training set)
+- **Algorithm:** Random Forest Regressor
+- **Validation:** 5-Fold Cross-Validation
+- **Target:** LN(IC50)
+- **Features:** Top 20 Correlated Genes (from training set)
 
----
+## 🏗 Future Extensions
 
-🏗 Future Extensions
+### 🔮 Planned Features
 
-🔮 Planned Features
+- **Deep Learning:** Integrate PyTorch neural networks (e.g., Multi-Layer Perceptrons) to capture nonlinear relationships.
+- **Multi-Omics Integration:** Incorporate copy number variations (CNV) and somatic mutation data alongside RNA-seq.
+- **Pathway Enrichment:** Add GSEA (Gene Set Enrichment Analysis) to visualize affected biological pathways (e.g., EGFR signaling).
 
-· Deep Learning: Integrate PyTorch neural networks (e.g., Multi-Layer Perceptrons) to capture nonlinear relationships.
-· Multi-Omics Integration: Incorporate copy number variations (CNV) and somatic mutation data alongside RNA-seq.
-· Pathway Enrichment: Add GSEA (Gene Set Enrichment Analysis) to visualize affected biological pathways (e.g., EGFR signaling).
-
----
-
-🤝 Contributing
+## 🤝 Contributing
 
 We welcome contributions! Here's how to help:
 
 1. Fork the repository
-2. Create a feature branch (git checkout -b feature/AmazingFeature)
-3. Commit your changes (git commit -m 'Add AmazingFeature')
-4. Push to the branch (git push origin feature/AmazingFeature)
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-📋 Code Guidelines
+### 📋 Code Guidelines
 
-· Follow PEP 8 style guide
-· Add docstrings to functions
-· Include unit tests for new features
-· Update documentation accordingly
+- Follow PEP 8 style guide
+- Add docstrings to functions
+- Include unit tests for new features
+- Update documentation accordingly
 
----
-
-📚 Citation
+## 📚 Citation
 
 If you use this project in your research, please cite:
 
@@ -258,9 +229,7 @@ If you use this project in your research, please cite:
 }
 ```
 
----
-
-👨‍🔬 Developer
+## 👨‍🔬 Developer
 
 <p align="center">
   <img src="assets/profile.jpg" alt="Developer" width="150" style="border-radius: 50%; border: 3px solid #00e5ff;">
@@ -268,51 +237,47 @@ If you use this project in your research, please cite:
   <strong>Freedom Evbakoe Amenaghawon</strong>
   <br>
   <em>Computational Biologist & Data Scientist</em>
-</p>📞 Contact Information
+</p>
 
-· GitHub: @famenaghawon
-· ORCID: 0009-0003-1457-809X
-· Email: f.e.amenaghawon@gmail.com
-· LinkedIn: famenaghawon
+### 📞 Contact Information
 
----
+- **GitHub:** [@famenaghawon](https://github.com/famenaghawon)
+- **ORCID:** [0009-0003-1457-809X](https://orcid.org/0009-0003-1457-809X)
+- **Email:** [f.e.amenaghawon@gmail.com](mailto:f.e.amenaghawon@gmail.com)
+- **LinkedIn:** [famenaghawon](https://www.linkedin.com/in/famenaghawon)
 
-🏆 Certifications & Skills
+## 🏆 Certifications & Skills
 
-Technical Skills:
+### Technical Skills
 
-· Python (Advanced)
-· Machine Learning (Scikit-learn, Cross-Validation)
-· Data Engineering (Chunking, Parquet streaming)
-· Biostatistics (Pearson Correlation, FDR)
-· Data Visualization (Plotly, Streamlit)
-· Cloud Deployment (Hugging Face, Streamlit Cloud)
+- Python (Advanced)
+- Machine Learning (Scikit-learn, Cross-Validation)
+- Data Engineering (Chunking, Parquet streaming)
+- Biostatistics (Pearson Correlation, FDR)
+- Data Visualization (Plotly, Streamlit)
+- Cloud Deployment (Hugging Face, Streamlit Cloud)
 
-Tools:
+### Tools
 
-· Streamlit, Plotly, Scikit-learn
-· Pandas, NumPy, Statsmodels
-· Git, GitHub, Streamlit Cloud
-· Jupyter, VS Code
+- Streamlit, Plotly, Scikit-learn
+- Pandas, NumPy, Statsmodels
+- Git, GitHub, Streamlit Cloud
+- Jupyter, VS Code
 
----
+## 📄 License
 
-📄 License
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🌟 Acknowledgments
 
----
+### 🎓 Educational Resources
 
-🌟 Acknowledgments
+- [Streamlit Documentation](https://docs.streamlit.io)
+- [Plotly Python Graphing Library](https://plotly.com/python/)
+- [Scikit-learn User Guide](https://scikit-learn.org/stable/user_guide.html)
+- [GDSC (Genomics of Drug Sensitivity in Cancer) Datasets](https://www.cancerrxgene.org/)
 
-🎓 Educational Resources
-
-· Streamlit Documentation
-· Plotly Python Graphing Library
-· Scikit-learn User Guide
-· GDSC (Genomics of Drug Sensitivity in Cancer) Datasets
-
-🛠 Tools & Frameworks
+### 🛠 Tools & Frameworks
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
@@ -327,6 +292,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
   <strong>🎯 Precision Oncology Pipeline • Version 3.0 • 2026</strong>
   <br>
   <em>Advancing computational biology through real-world data science</em>
-</p><p align="center">
-  <a href="#-neuro-rx-advanced-drug-response-prediction--multi-omics-analysis-platform">Back to Top ↑</a>
+</p>
+
+<p align="center">
+  <a href="#-neuro-rx-advanced-drug-response-prediction--multi-omics-analysis-platform">⬆ Back to Top</a>
 </p>
