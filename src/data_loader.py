@@ -5,22 +5,24 @@ from statsmodels.stats.multitest import multipletests
 import os
 from sklearn.model_selection import train_test_split
 import streamlit as st
+from datasets import load_dataset
 
 DATA_DIR = "data/raw"
 
 # ============================================================
 # 🌐 REMOTE DATA FETCHING (Hugging Face)
 # ============================================================
-@st.cache_data(show_spinner="⚡ Streaming gene expression data (230 MB)...")
+@st.cache_data(show_spinner="⚡ Streaming gene expression data via HF Xet...")
 def fetch_expression_data():
-    """
-    Downloads the large CSV directly from Hugging Face into memory.
-    Uses Streamlit's cache so it only downloads once per session.
-    """
-    url = "https://huggingface.co/datasets/famenaghawon/drug-response-data/resolve/main/Expression_Data_subset.csv"
     try:
-        # index_col=0 ensures the first column (gene/cell line IDs) is used as the index
-        df_expr = pd.read_csv(url, index_col=0)
+        # This uses HF's optimized engine to download the file instantly
+        dataset = load_dataset("famenaghawon/drug-response-data", split="train")
+        df_expr = dataset.to_pandas()
+        
+        # Ensure the first column is set as the index (just like pd.read_csv(index_col=0))
+        if df_expr.columns[0] not in ['Gene', 'Cell_Line']: 
+            df_expr.set_index(df_expr.columns[0], inplace=True)
+            
         return df_expr
     except Exception as e:
         st.error(f"Failed to stream data from Hugging Face: {e}")
