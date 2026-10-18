@@ -12,7 +12,7 @@
 ## 🎯 Project Overview
 
 <p align="center">
-  <img src="https://cdn-icons-png.flaticon.com/512/2771/2771778.png" width="120" alt="Precision Medicine">
+  <img src="assets/precision_medicine.png?v=2" width="120" alt="Precision Medicine">
   <br>
   <em>A production-grade computational biology dashboard for precision oncology</em>
 </p>
