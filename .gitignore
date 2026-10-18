@@ -58,3 +58,6 @@ data/raw/*
 # Ignore large model files
 *.pkl
 *.h5
+*.csv
+*.xlsx
+*.parquet

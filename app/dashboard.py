@@ -9,16 +9,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Auto-download for cloud
-if not os.path.exists("data/raw/Expression_Data_subset.csv"):
-    with st.spinner("⚡ Initializing biological data stream..."):
-        try:
-            import runpy
-            runpy.run_path("download_data.py", run_name="__main__")
-        except Exception as e:
-            st.error(f"Data stream failed: {e}")
-            st.stop()
-
 import pandas as pd
 import numpy as np
 import plotly.express as px

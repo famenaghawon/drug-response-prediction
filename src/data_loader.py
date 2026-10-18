@@ -1,32 +1,49 @@
 import pandas as pd
-import numpy as np
+import streamlit as st
+import os
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
-import os
 from sklearn.model_selection import train_test_split
-import streamlit as st
-from datasets import load_dataset
 
 DATA_DIR = "data/raw"
 
-# ============================================================
-# 🌐 REMOTE DATA FETCHING (Hugging Face)
-# ============================================================
-@st.cache_data(show_spinner="⚡ Streaming gene expression data via HF Xet...")
+@st.cache_data(show_spinner="⚡ Streaming gene expression data (Parquet)...")
 def fetch_expression_data():
+    # Make sure this is the /resolve/ URL to the .parquet file!
+    url = "https://huggingface.co/datasets/famenaghawon/drug-response-data/resolve/main/Expression_Data.parquet"
     try:
-        # This uses HF's optimized engine to download the file instantly
-        dataset = load_dataset("famenaghawon/drug-response-data", split="train")
-        df_expr = dataset.to_pandas()
-        
-        # Ensure the first column is set as the index (just like pd.read_csv(index_col=0))
-        if df_expr.columns[0] not in ['Gene', 'Cell_Line']: 
-            df_expr.set_index(df_expr.columns[0], inplace=True)
-            
+        df_expr = pd.read_parquet(url)
         return df_expr
     except Exception as e:
-        st.error(f"Failed to stream data from Hugging Face: {e}")
+        st.error(f"Failed to stream data: {e}")
         return None
+
+def load_gdsc_data():
+    try:
+        response_file = os.path.join(DATA_DIR, "GDSC2_fitted_dose_response_27Oct23.xlsx")
+        expr_file = os.path.join(DATA_DIR, "Expression_Data_subset.csv")
+       
+        # Load Response Data
+        if os.path.exists(response_file):
+            df_resp = pd.read_excel(response_file)
+        else:
+            # If response data isn't committed, you MUST host it too. 
+            # Assuming it's small enough to commit to GitHub.
+            st.error("Response data file missing!")
+            return None, None
+            
+        df_resp = df_resp.rename(columns={'CELL_LINE_NAME': 'Cell_Line', 'DRUG_NAME': 'Drug', 'LN_IC50': 'IC50'})
+       
+        # Load Expression Data
+        if os.path.exists(expr_file):
+            df_expr = pd.read_csv(expr_file, index_col=0)
+        else:
+            df_expr = fetch_expression_data()
+            
+        return df_resp, df_expr
+    except Exception as e:
+        st.error(f"Error loading data pipeline: {e}")
+        return None, None
 
 # ============================================================
 # 📊 MAIN DATA LOADER
