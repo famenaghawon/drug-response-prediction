@@ -1,6 +1,12 @@
 import pytest
 import pandas as pd
 import numpy as np
+import sys
+import os
+
+# This line tells Python to look in the root folder for the 'src' module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.data_loader import process_biomarkers
 from src.model import train_drug_model
 
