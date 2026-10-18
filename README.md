@@ -119,18 +119,8 @@ python download_data.py
 ```bash
 streamlit run app/dashboard.py
 # App opens at http://localhost:8501
-```
 
-```
 
-***
-
-### Here is the Final, Complete `README.md`
-I have added back the Developer Profile Picture, the local download instructions, and kept everything perfectly aligned with your Python 3.11 + Hugging Face architecture. 
-
-You can copy and paste this entire block directly:
-
-```markdown
 <div align="center">
   <h1>🧬 NEURO-RX: Advanced Drug Response Prediction Engine</h1>
   <p><em>A production-grade, multi-omics computational biology dashboard for precision oncology.</em></p>
