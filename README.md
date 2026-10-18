@@ -31,7 +31,7 @@ This advanced platform integrates multi-omics data analysis, **machine learning 
 Live App: [https://drug-response-prediction.streamlit.app](https://drug-response-prediction.streamlit.app)
 
 <p align="center">
-  <img src="https://via.placeholder.com/800x450/0a0e14/FFFFFF?text=Interactive+Dashboard+Screenshot" alt="Dashboard Screenshot" width="800">
+  <img src="assets/dashboard.png" alt="Dashboard Screenshot" width="800">
   <br>
   <em>Interactive dashboard with six analytical tabs</em>
 </p>
@@ -43,9 +43,9 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
 ### 🔬 Multi-Dimensional Analysis
 | Visualization | Purpose | Key Insight |
 |--------------|---------|-------------|
-| ![Volcano Plot](https://via.placeholder.com/300x200/1E3A8A/FFFFFF?text=Volcano+Plot) | Biomarker Discovery | Identifies significant genes (p<0.001, \|FC\|>1.5) |
-| ![Dose-Response](https://via.placeholder.com/300x200/3B82F6/FFFFFF?text=Dose+Response) | Drug Efficacy | HCC827 shows 10x sensitivity vs A549 |
-| ![3D Landscape](https://via.placeholder.com/300x200/7C3AED/FFFFFF?text=3D+Landscape) | Multi-Omics Integration | Visualizes gene expression, significance, and fold change |
+| <img src="assets/volcano.png" width="300"> | Biomarker Discovery | Identifies significant genes using Pearson correlation with capped Y-axis for visual clarity. |
+| <img src="assets/dose.png" width="300"> | Drug Efficacy | Displays the real LN(IC50) distribution across 900+ cell lines for selected EGFR inhibitors. |
+| <img src="assets/ml.png" width="300"> | Predictive Modeling | Interactive Random Forest simulator showing Predicted vs. Actual IC50 with error margins. |
 
 ### 🎯 Key Features
 
@@ -138,25 +138,26 @@ streamlit run app/dashboard.py
 
 ---
 
-📁 Project Structure
+## 📁 Project Structure
 
 drug-response-prediction/
 ├── app/
-│   ├── dashboard.py          # Main Streamlit application
-│   └── pages/                # Multi-page extensions
-├── notebooks/
-│   └── 01_Drug_Response_Visualization.ipynb  # Initial analysis
-├── src/                     # Modular Python code
-├── visualizations/          # Generated interactive plots
+│   └── dashboard.py          # Main Streamlit application
+├── src/
+│   ├── data_loader.py        # Data processing and FDR logic
+│   └── model.py              # Machine learning training logic
+├── tests/
+│   └── test_logic.py         # Unit tests for ML pipeline
 ├── data/
-│   └── synthetic_drug_response.csv  # Example datasets
-├── requirements.txt         # Python dependencies
-├── README.md               # This documentation
-└── .gitignore              # Git exclusion rules
+│   └── raw/                  # Directory for datasets (ignored by Git)
+├── .github/workflows/        # CI/CD pipelines for testing
+├── filter_data.py            # Script to chunk & pivot the 6GB raw data
+├── download_data.py          # Automated data fetcher for cloud deployment
+├── requirements.txt          # Python dependencies
+├── README.md                 # This documentation
+└── .gitignore                # Git exclusion rules
 
-<p align="center">
-  <img src="https://via.placeholder.com/600x300/0a0e14/FFFFFF?text=Project+Structure+Diagram" alt="Project Structure" width="600">
-</p>---
+
 
 🔬 Scientific Relevance
 
@@ -194,16 +195,13 @@ This project demonstrates computational approaches for:
 
 📊 Model Performance
 
-Machine Learning Model:
-  Algorithm: Random Forest Regressor
-  Accuracy: 92.4%
-  Features: 15 synthetic gene expressions
-  Samples: 300 training examples
-  Prediction: IC50 values (µM)
-  
-  <p align="center">
-  <img src="https://via.placeholder.com/700x400/0a0e14/FFFFFF?text=Model+Performance+Metrics" alt="Performance Metrics" width="700">
-</p>---
+### 📊 Model Performance (Honest Metrics)
+
+**Machine Learning Model:**
+- **Algorithm:** Random Forest Regressor
+- **Validation:** 5-Fold Cross-Validation
+- **Target:** LN(IC50)
+- **Features:** Top 20 Correlated Genes
 
 🏗 Future Extensions
 
@@ -217,9 +215,11 @@ Machine Learning Model:
 
 ##🎯 Research Applications
 
-<p align="center">
-  <img src="https://via.placeholder.com/800x200/0a0e14/FFFFFF?text=Research+Applications+Timeline" alt="Research Applications" width="800">
-</p>---
+- **Early detection** — evaluating candidate biomarkers for cancer screening.
+- **Prognostic stratification** — separating patients by predicted survival.
+- **Therapeutic targeting** — prioritising candidate drug targets from expression data.
+- **Personalised medicine** — treatment selection based on molecular profiles.
+
 
 🤝 Contributing
 
@@ -257,7 +257,7 @@ If you use this project in your research, please cite:
 ##👨‍🔬 Developer
 
 <p align="center">
-  <img src="https://via.placeholder.com/150/0a0e14/FFFFFF?text=Developer+Photo" alt="Developer" width="150" style="border-radius: 50%;">
+  <img src="assets/profile.jpg" alt="Developer" width="150" style="border-radius: 50%;">
   <br>
   <strong>Freedom Evbakoe Amenaghawon</strong>
   <br>
