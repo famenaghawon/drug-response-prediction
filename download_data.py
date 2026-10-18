@@ -23,7 +23,7 @@ def download_drug_data():
 def download_expression_data():
     import urllib.request
     # Paste your copied link here
-    url = "https://github.com/famenaghawon/drug-response-prediction/releases/download/v1.0.0/Expression_Data_subset.csv"
+    url = "https://github.com/famenaghawon/drug-response-prediction/releases/download/v2.0.0/Expression_Data_subset.csv"
     dest = os.path.join(DATA_DIR, "Expression_Data_subset.csv")
     
     if os.path.exists(dest):
