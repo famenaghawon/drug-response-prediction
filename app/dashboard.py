@@ -1,5 +1,11 @@
 import os
+import sys
 import streamlit as st
+
+# ============================================================
+# PATH FIX: Allows Python to find the 'src' folder from the 'app' folder
+# ============================================================
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # MUST BE THE FIRST STREAMLIT COMMAND
 st.set_page_config(
