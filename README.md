@@ -1,4 +1,4 @@
-﻿# 🧬 NEURO-RX: Advanced Drug Response Prediction & Multi-Omics Analysis Platform
+﻿# 🧬 NEURO-RX: Transcriptomic Drug Response Prediction Engine
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io)
@@ -9,15 +9,17 @@
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Click_Here-FF4B4B?style=for-the-badge)](https://drug-response-prediction.streamlit.app)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23448119.svg)](https://doi.org/10.5281/zenodo.23448119)
 
+> **⚠️ Disclaimer:** This tool is for research and educational purposes only and is not intended for clinical decision-making.
+
 ## 🎯 Project Overview
 
 <p align="center">
   <img src="assets/precision_medicine.png?v=2" width="120" alt="Precision Medicine">
   <br>
-  <em>A production-grade computational biology dashboard for precision oncology</em>
+  <em>A computational biology dashboard for precision oncology</em>
 </p>
 
-This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real multi-omics data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (LN_IC50) across hundreds of cancer cell lines.
+This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real pharmacogenomic data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (LN_IC50) across hundreds of cancer cell lines.
 
 Unlike standard tutorials, this project demonstrates the ability to handle **large-scale, real-world data** — from the full GDSC2 RNA-seq matrix (6 GB uncompressed) down to a compressed 91 MB Parquet subset — and apply rigorous statistical methodologies to extract biological meaning without data leakage.
 
@@ -178,6 +180,8 @@ This project demonstrates computational approaches for:
    - Test RMSE: **1.139** (in LN_IC50 units)
 
 > **Scientific Note:** An R² of ~0.11–0.18 is highly realistic and consistent with state-of-the-art literature for single-omics drug response prediction. Predicting IC50 from gene expression alone is notoriously difficult due to the polygenic nature of drug resistance and high biological noise.
+>
+> **Methodological Note:** Feature selection (Top 20 genes) was performed on the training partition prior to Cross-Validation. While this prevents full data leakage, future iterations will implement nested cross-validation to strictly isolate feature selection within each CV fold.
 
 ### 📊 Model Details
 
@@ -220,7 +224,7 @@ If you use this project in your research, please cite:
 ```bibtex
 @software{amenaghawon_drugresponse_2026,
   author = {Amenaghawon, Freedom Evbakoe},
-  title = {NEURO-RX: Advanced Drug Response Prediction Pipeline},
+  title = {NEURO-RX: Transcriptomic Drug Response Prediction Engine},
   year = {2026},
   publisher = {GitHub},
   url = {https://github.com/famenaghawon/drug-response-prediction},
@@ -295,5 +299,5 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 </p>
 
 <p align="center">
-  <a href="#-neuro-rx-advanced-drug-response-prediction--multi-omics-analysis-platform">⬆ Back to Top</a>
+  <a href="#-neuro-rx-transcriptomic-drug-response-prediction-engine">⬆ Back to Top</a>
 </p>

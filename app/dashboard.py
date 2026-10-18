@@ -2,10 +2,12 @@ import os
 import sys
 import streamlit as st
 
+
 # ============================================================
 # PATH FIX: Allows Python to find the 'src' folder from the 'app' folder
 # ============================================================
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 
 # MUST BE THE FIRST STREAMLIT COMMAND
 st.set_page_config(
@@ -15,6 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -22,8 +25,10 @@ import plotly.graph_objects as go
 import warnings
 warnings.filterwarnings('ignore')
 
+
 from src.data_loader import load_gdsc_data, process_biomarkers
 from src.model import train_drug_model
+
 
 # ============================================================
 # 🌌 ULTRA-FUTURISTIC CSS SYSTEM
@@ -31,6 +36,7 @@ from src.model import train_drug_model
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600&display=swap');
+
 
     /* ---------- GLOBAL CANVAS ---------- */
     .stApp {
@@ -43,6 +49,7 @@ st.markdown("""
         font-family: 'Rajdhani', sans-serif;
         color: #d8e6ff;
     }
+
 
     /* Animated grid overlay */
     .stApp::before {
@@ -62,7 +69,9 @@ st.markdown("""
         100% { background-position: 48px 48px, 48px 48px; }
     }
 
+
     .block-container { padding-top: 1.5rem; padding-bottom: 3rem; position: relative; z-index: 1; }
+
 
     /* ---------- HERO ---------- */
     .hero-wrap { text-align: center; padding: 2rem 1rem 1.5rem 1rem; position: relative; }
@@ -108,6 +117,7 @@ st.markdown("""
         text-transform: uppercase;
     }
     .sub-title span { color: #00e5ff; }
+
 
     /* ---------- METRIC CARDS (HOLOGRAPHIC) ---------- */
     .metric-card {
@@ -180,6 +190,7 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
 
+
     /* ---------- SECTION HEADERS ---------- */
     .section-header {
         font-family: 'Orbitron', sans-serif;
@@ -204,6 +215,7 @@ st.markdown("""
         0%, 100% { opacity: 1; }
         50% { opacity: 0.3; }
     }
+
 
     /* ---------- TABS ---------- */
     .stTabs [data-baseweb="tab-list"] {
@@ -239,6 +251,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none; }
 
+
     /* ---------- SIDEBAR ---------- */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #060a12 0%, #0a1120 100%);
@@ -262,6 +275,7 @@ st.markdown("""
         font-size: 0.92rem;
     }
 
+
     /* ---------- INPUTS ---------- */
     .stSelectbox > div > div {
         background: rgba(10, 18, 32, 0.9) !important;
@@ -278,6 +292,7 @@ st.markdown("""
         letter-spacing: 1.5px !important;
         text-transform: uppercase !important;
     }
+
 
     /* ---------- BUTTONS ---------- */
     .stButton > button, .stDownloadButton > button {
@@ -301,6 +316,7 @@ st.markdown("""
         transform: translateY(-2px);
     }
 
+
     /* ---------- ALERTS / INFO ---------- */
     .stAlert {
         background: rgba(10, 18, 32, 0.85) !important;
@@ -312,6 +328,7 @@ st.markdown("""
         backdrop-filter: blur(10px);
     }
 
+
     /* ---------- DATAFRAME ---------- */
     [data-testid="stDataFrame"] {
         border: 1px solid rgba(0, 229, 255, 0.2);
@@ -319,6 +336,7 @@ st.markdown("""
         overflow: hidden;
         box-shadow: 0 0 24px rgba(0, 229, 255, 0.05);
     }
+
 
     /* ---------- METRICS (native) ---------- */
     [data-testid="stMetric"] {
@@ -346,10 +364,12 @@ st.markdown("""
         font-size: 0.78rem !important;
     }
 
+
     /* ---------- SPINNER ---------- */
     .stSpinner > div {
         border-top-color: #00e5ff !important;
     }
+
 
     /* ---------- FOOTER ---------- */
     .footer {
@@ -370,6 +390,7 @@ st.markdown("""
         50% { transform: scale(1.25); }
     }
 
+
     /* ---------- SCROLLBAR ---------- */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #04070d; }
@@ -378,11 +399,13 @@ st.markdown("""
         border-radius: 4px;
     }
 
+
     /* ---------- HIDE STREAMLIT CHROME ---------- */
     #MainMenu, footer, header { visibility: hidden; }
     .stDeployButton { display: none; }
 </style>
 """, unsafe_allow_html=True)
+
 
 # ============================================================
 # 🧬 HERO SECTION
@@ -397,12 +420,27 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
-# 📊 DATA LOAD
+# 📊 DATA LOAD (P0-3 & P1-5 FIXES)
 # ============================================================
-df_resp, df_expr = load_gdsc_data()
+
+# 1. Add caching HERE in the UI layer, keeping the backend pure
+@st.cache_data(show_spinner="⚡ Streaming pharmacogenomic data...")
+def cached_load_data():
+    return load_gdsc_data()
+
+# 2. Wrap in try/except with accurate error message
+try:
+    df_resp, df_expr = cached_load_data()
+except Exception as e:
+    # Fixes P1-5: Accurate error message pointing to Hugging Face
+    st.error(f"🚨 Data stream failed. Please verify your network connection or Hugging Face dataset URLs. Details: {e}")
+    st.stop()
+
 
 if df_resp is not None and df_expr is not None:
+
 
     # ------------------------------------------------------------
     # SIDEBAR
@@ -416,12 +454,14 @@ if df_resp is not None and df_expr is not None:
             [d for d in default_drugs if d in available_drugs] or available_drugs
         )
 
+
         st.markdown("---")
         st.markdown("## 🧪 Methodology")
         st.info(
             "**Data Leakage Protocol:** 80/20 split enforced *before* "
             "statistical testing. FDR is computed strictly on the training partition."
         )
+
 
         st.markdown("---")
         st.markdown("## 📡 System Status")
@@ -434,11 +474,13 @@ if df_resp is not None and df_expr is not None:
         </div>
         """, unsafe_allow_html=True)
 
+
     # ------------------------------------------------------------
     # PROCESS
     # ------------------------------------------------------------
     with st.spinner("⚡ Running biomarker computation pipeline..."):
         train_df, test_df, results_df = process_biomarkers(df_resp, df_expr, selected_drug)
+
 
     if results_df is None:
         st.error(f"Insufficient matched cell lines for **{selected_drug}**. Pipeline halted.")
@@ -450,16 +492,20 @@ if df_resp is not None and df_expr is not None:
             "◈ INTEGRITY"
         ])
 
+
         # ============================================================
         # TAB 1 — VOLCANO
         # ============================================================
         with tab1:
             st.markdown(f'<div class="section-header">Biomarker Discovery :: {selected_drug}</div>', unsafe_allow_html=True)
 
+
             col1, col2 = st.columns([3, 1])
+
 
             with col1:
                 results_df['plot_y'] = np.clip(results_df['-log10_P_Raw'], 0, 12)
+
 
                 fig = px.scatter(
                     results_df, x='Correlation', y='plot_y',
@@ -473,6 +519,7 @@ if df_resp is not None and df_expr is not None:
                               annotation_text="P=0.05", annotation_font_color="#00ffa3")
                 fig.add_vline(x=0.2, line_dash="dash", line_color="#00ffa3")
                 fig.add_vline(x=-0.2, line_dash="dash", line_color="#00ffa3")
+
 
                 fig.update_traces(marker=dict(size=7, line=dict(width=0.5, color='rgba(0,229,255,0.35)')))
                 fig.update_layout(
@@ -493,6 +540,7 @@ if df_resp is not None and df_expr is not None:
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
+
             with col2:
                 st.markdown(f"""
                 <div class="metric-card">
@@ -512,6 +560,7 @@ if df_resp is not None and df_expr is not None:
                 </div>
                 """, unsafe_allow_html=True)
 
+
                 st.download_button(
                     "⤓ EXPORT BIOMARKERS",
                     results_df.to_csv(index=False),
@@ -519,11 +568,13 @@ if df_resp is not None and df_expr is not None:
                     use_container_width=True
                 )
 
+
         # ============================================================
         # TAB 2 — DOSE RESPONSE
         # ============================================================
         with tab2:
             st.markdown(f'<div class="section-header">Dose-Response Analysis :: {selected_drug}</div>', unsafe_allow_html=True)
+
 
             fig_hist = px.histogram(
                 pd.concat([train_df, test_df]), x='IC50', nbins=30,
@@ -546,9 +597,11 @@ if df_resp is not None and df_expr is not None:
             )
             st.plotly_chart(fig_hist, use_container_width=True)
 
+
             st.markdown('<div class="section-header">Top 10 Most Sensitive Cell Lines</div>', unsafe_allow_html=True)
             sensitive = pd.concat([train_df, test_df]).nsmallest(10, 'IC50')[['Cell_Line', 'IC50']]
             st.dataframe(sensitive, use_container_width=True)
+
 
         # ============================================================
         # TAB 3 — ML PREDICTOR
@@ -561,11 +614,14 @@ if df_resp is not None and df_expr is not None:
                 unsafe_allow_html=True
             )
 
+
             top_genes = results_df[results_df['Significant']]['Gene'].head(20).tolist()
             if len(top_genes) < 5:
                 top_genes = results_df['Gene'].head(20).tolist()
 
+
             model, metrics, pred_df = train_drug_model(train_df, test_df, top_genes)
+
 
             # Metric strip
             st.markdown('<div class="section-header">Performance Telemetry</div>', unsafe_allow_html=True)
@@ -574,9 +630,12 @@ if df_resp is not None and df_expr is not None:
             col_b.metric("Test R² (Unseen)", f"{metrics['test_r2']:.3f}")
             col_c.metric("Test RMSE", f"{metrics['test_rmse']:.3f}")
 
+
             st.markdown("---")
 
+
             col_ml1, col_ml2 = st.columns(2)
+
 
             with col_ml1:
                 st.markdown('<div class="section-header">Predicted vs Actual</div>', unsafe_allow_html=True)
@@ -598,6 +657,7 @@ if df_resp is not None and df_expr is not None:
                 )
                 st.plotly_chart(fig_pred, use_container_width=True)
 
+
             with col_ml2:
                 st.markdown('<div class="section-header">🔮 Prediction Simulator</div>', unsafe_allow_html=True)
                 st.markdown(
@@ -606,13 +666,16 @@ if df_resp is not None and df_expr is not None:
                     unsafe_allow_html=True
                 )
 
+
                 test_cell = st.selectbox("Cell Line ID", test_df['Cell_Line'].unique())
                 cell_idx = test_df[test_df['Cell_Line'] == test_cell].index[0]
                 actual_val = test_df.loc[cell_idx, 'IC50']
 
+
                 train_medians = train_df[top_genes].median()
                 cell_features = test_df.loc[[cell_idx], top_genes].fillna(train_medians)
                 predicted_val = model.predict(cell_features.values)[0]
+
 
                 col_sim1, col_sim2 = st.columns(2)
                 col_sim1.metric("Actual LN(IC50)", f"{actual_val:.3f}")
@@ -622,11 +685,13 @@ if df_resp is not None and df_expr is not None:
                     delta=f"{predicted_val - actual_val:.3f} (Error)"
                 )
 
+
         # ============================================================
         # TAB 4 — INTEGRITY
         # ============================================================
         with tab4:
             st.markdown('<div class="section-header">Pipeline Integrity Protocols</div>', unsafe_allow_html=True)
+
 
             st.markdown("""
             <div style="background:rgba(10,18,32,0.7); border:1px solid rgba(0,229,255,0.2);
@@ -641,7 +706,9 @@ if df_resp is not None and df_expr is not None:
             </div>
             """, unsafe_allow_html=True)
 
+
             st.markdown('<div class="section-header">Top Biomarkers (FDR &lt; 0.05)</div>', unsafe_allow_html=True)
+
 
             sig_genes = results_df[results_df['P_Value_FDR'] < 0.05].head(10)
             if sig_genes.empty:
@@ -652,8 +719,10 @@ if df_resp is not None and df_expr is not None:
             else:
                 st.dataframe(sig_genes[['Gene', 'Correlation', 'P_Value_FDR']], use_container_width=True)
 
+
 else:
     st.warning("⚠ Data loading failed. Verify `data/raw/` directory integrity.")
+
 
 # ============================================================
 # FOOTER
