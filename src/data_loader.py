@@ -19,27 +19,33 @@ def fetch_expression_data():
         st.error(f"Failed to stream data: {e}")
         return None
 
+@st.cache_data(show_spinner="⚡ Streaming response data...")
+def fetch_response_data():
+    url = "https://huggingface.co/datasets/famenaghawon/drug-response-data/resolve/main/GDSC2_response.csv"
+    df_resp = pd.read_csv(url)
+    return df_resp
+
 def load_gdsc_data():
+    """Loads real GDSC data and standardizes column names."""
     try:
-        response_file = os.path.join(DATA_DIR, "GDSC2_fitted_dose_response_27Oct23.xlsx")
+        # Load Expression Data (Parquet)
         expr_file = os.path.join(DATA_DIR, "Expression_Data_subset.csv")
-       
-        # Load Response Data
-        if os.path.exists(response_file):
-            df_resp = pd.read_excel(response_file)
-        else:
-            
-            st.error("Response data file missing!")
-            return None, None
-            
-        df_resp = df_resp.rename(columns={'CELL_LINE_NAME': 'Cell_Line', 'DRUG_NAME': 'Drug', 'LN_IC50': 'IC50'})
-       
-        # Load Expression Data
         if os.path.exists(expr_file):
             df_expr = pd.read_csv(expr_file, index_col=0)
         else:
             df_expr = fetch_expression_data()
             
+        # Load Response Data (CSV from Hugging Face)
+        response_file = os.path.join(DATA_DIR, "GDSC2_fitted_dose_response_27Oct23.xlsx")
+        if os.path.exists(response_file):
+            df_resp = pd.read_excel(response_file)
+        else:
+            df_resp = fetch_response_data()
+
+        if df_resp is None or df_expr is None:
+            return None, None
+            
+        df_resp = df_resp.rename(columns={'CELL_LINE_NAME': 'Cell_Line', 'DRUG_NAME': 'Drug', 'LN_IC50': 'IC50'})
         return df_resp, df_expr
     except Exception as e:
         st.error(f"Error loading data pipeline: {e}")
@@ -69,7 +75,7 @@ def load_gdsc_data():
             
             df_expr = pd.read_csv(expr_file, index_col=0)
         else:
-            # If on Streamlit Cloud (or file missing), stream from Hugging Face
+            
             df_expr = fetch_expression_data()
             
         if df_expr is None:
