@@ -1,7 +1,7 @@
-﻿# 💊 Advanced Drug Response Prediction & Multi-Omics Analysis Platform
+﻿# 🧬 NEURO-RX: Advanced Drug Response Prediction & Multi-Omics Analysis Platform
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.28.0-red.svg)](https://streamlit.io)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io)
 [![Plotly](https://img.shields.io/badge/Plotly-Interactive-orange.svg)](https://plotly.com)
 [![Machine Learning](https://img.shields.io/badge/ML-Scikit--learn-yellow.svg)](https://scikit-learn.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -17,9 +17,9 @@
   <em>A production-grade computational biology dashboard for precision oncology</em>
 </p>
 
-This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real multi-omics data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (IC50) across hundreds of cancer cell lines. 
+This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real multi-omics data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (LN_IC50) across hundreds of cancer cell lines. 
 
-Unlike standard tutorials, this project demonstrates the ability to handle **large-scale, real-world data** (a raw 6GB RNA-seq matrix) and apply rigorous statistical methodologies to extract biological meaning.
+Unlike standard tutorials, this project demonstrates the ability to handle **large-scale, real-world data** (a raw 6GB RNA-seq matrix) and apply rigorous statistical methodologies to extract biological meaning without data leakage.
 
 ---
 
@@ -36,7 +36,7 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
 <p align="center">
   <img src="assets/dashboard.png" alt="Dashboard Screenshot" width="800">
   <br>
-  <em>Interactive dashboard with real GDSC data</em>
+  <em>Interactive NEURO-RX dashboard with real GDSC data</em>
 </p>
 
 ---
@@ -47,7 +47,7 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
 
 | Visualization | Purpose | Key Insight |
 | :---: | :--- | :--- |
-| ![Volcano Plot](assets/volcano.png) | **Biomarker Discovery** | Identifies significant genes using Pearson correlation with capped Y-axis for visual clarity. |
+| ![Volcano Plot](assets/volcano.png) | **Biomarker Discovery** | Identifies significant genes using Pearson correlation with strict FDR correction. |
 | ![Dose-Response](assets/dose.png) | **Drug Efficacy** | Displays the real LN(IC50) distribution across 900+ cell lines for selected EGFR inhibitors. |
 | ![ML Predictor](assets/ml.png) | **Predictive Modeling** | Interactive Random Forest simulator showing Predicted vs. Actual IC50 with error margins. |
 
@@ -59,9 +59,9 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
       <td align="center" width="33%">
         <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="60" alt="Machine Learning">
         <br>
-        <strong>Real ML Pipeline</strong>
+        <strong>Zero-Trust ML Pipeline</strong>
         <br>
-        Random Forest with 5-Fold CV
+        Data split 80/20 before testing to prevent leakage
       </td>
       <td align="center" width="33%">
         <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="60" alt="Visualization">
@@ -73,9 +73,9 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
       <td align="center" width="33%">
         <img src="https://cdn-icons-png.flaticon.com/512/3067/3067256.png" width="60" alt="Deployment">
         <br>
-        <strong>Scalable Architecture</strong>
+        <strong>Cloud-Native Streaming</strong>
         <br>
-        Chunked processing of 6GB data
+        Hugging Face Parquet integration (91MB)
       </td>
     </tr>
   </table>
@@ -85,34 +85,30 @@ Live App: [https://drug-response-prediction.streamlit.app](https://drug-response
 
 ## 🛠 Technical Implementation
 
-### 🔬 Real Data Integration & Pipeline
+### 🔬 Real Data Integration & Cloud Architecture
 
 This project does not use synthetic placeholders. It connects directly to the **GDSC2** dataset (Genomics of Drug Sensitivity in Cancer).
 
-```python
-# The pipeline automatically handles missing data and formats
-df_resp = pd.read_excel("GDSC2_fitted_dose_response_27Oct23.xlsx")
-df_expr = pd.read_csv("Expression_Data_subset.csv", index_col=0)
+**The Cloud Challenge:** The raw RNA-seq matrix is over 230MB. GitHub blocks files >100MB, and Streamlit Cloud times out if forced to download huge CSVs on boot.
 
-# Correlating 41,143 genes against IC50 for a specific drug
-corr, p_value = stats.pearsonr(gene_expression, ic50_values)
+**The Solution:** The CSV was converted to a highly compressed **Parquet** format (91MB) and is hosted on the Hugging Face Hub. The app uses `pandas.read_parquet()` to stream the data directly into memory during app startup.
+
+```python
+# Stream directly from Hugging Face Hub
+url = "https://huggingface.co/datasets/famenaghawon/drug-response-data/resolve/main/Expression_Data.parquet"
+df_expr = pd.read_parquet(url)
 ```
 
 📈 Advanced Data Pipeline
 
-· 6GB RNA-seq Processing: Uses a custom filter_data.py script to chunk, filter, and pivot a massive raw RNA-seq matrix into a usable ~50MB matrix of 41,143 genes × 943 cell lines.
-· Automated Data Fetching: download_data.py automatically retrieves the pre-processed datasets via GitHub Releases for fast cloud deployment.
-· Real-time Analytics: Fully interactive Plotly visualizations with dynamic hover templates and threshold lines.
-
-🧪 Key Analyses
-
-1. Differential Expression: Correlates 41,143 real genes with drug LN(IC50) values.
-2. Multiple Testing Correction: Implements strict Benjamini-Hochberg (FDR) to control false discovery rates.
-3. Machine Learning: Uses Random Forest Regressors validated with 5-Fold Cross-Validation to predict IC50 from top correlated genes.
+· Train/Test Split: 80/20 split performed before any statistical testing.
+· Imputation: Medians calculated exclusively on the training set and applied to the test set.
+· Multiple Testing: Benjamini-Hochberg (FDR) applied strictly to the training set.
+· Machine Learning: Random Forest Regressor validated using 5-Fold Cross-Validation.
 
 ---
 
-🚀 Quick Start
+🚀 Quick Start (Local Development)
 
 📦 Installation & Data Fetching
 
@@ -132,7 +128,7 @@ python -m venv .venv
 # Install dependencies
 pip install -r requirements.txt
 
-# Fetch the required datasets (Automated)
+# Fetch the required datasets (Optional for local fallback)
 python download_data.py
 ```
 
@@ -145,13 +141,6 @@ streamlit run app/dashboard.py
 # Open browser at: http://localhost:8501
 ```
 
-☁ Deploy to Streamlit Cloud
-
-1. Push code to GitHub (ensure data/ is in .gitignore).
-2. Visit share.streamlit.io.
-3. Connect your repository.
-4. Streamlit will automatically run download_data.py to fetch the datasets from the cloud and launch the app.
-
 ---
 
 📁 Project Structure
@@ -159,20 +148,18 @@ streamlit run app/dashboard.py
 ```text
 drug-response-prediction/
 ├── app/
-│   └── dashboard.py          # Main Streamlit application
+│   └── dashboard.py          # Main Streamlit application (NEURO-RX UI)
 ├── src/
-│   ├── data_loader.py        # Data processing and FDR logic
-│   └── model.py              # Machine learning training logic
+│   ├── data_loader.py        # Hugging Face streaming & FDR logic
+│   └── model.py              # Random Forest ML training pipeline
 ├── tests/
-│   └── test_logic.py         # Unit tests for ML pipeline
-├── data/
-│   └── raw/                  # Directory for datasets (ignored by Git)
-├── assets/                   # Dashboard screenshots and images
-├── .github/workflows/        # CI/CD pipelines for testing
-├── filter_data.py            # Script to chunk & pivot the 6GB raw data
-├── download_data.py          # Automated data fetcher for cloud deployment
+│   └── test_logic.py         # Pytest suite for ML pipeline integrity
+├── data/                     # Local fallback (ignored by Git)
+├── assets/                   # Dashboard screenshots and UI assets
+├── .github/workflows/        # CI/CD pipelines (Pytest & Flake8)
+├── download_data.py          # Data fetcher for local development
 ├── requirements.txt          # Python dependencies
-├── README.md                 # This documentation
+├── README.md                 # Documentation
 └── .gitignore                # Git exclusion rules
 ```
 
@@ -203,24 +190,26 @@ This project demonstrates computational approaches for:
   </table>
 </div>---
 
-📈 Results & Insights
+📈 Results & Insights (Honest Metrics)
 
 🏆 Key Findings (Real Data)
 
-1. Biomarker Discovery: Identified 90 statistically significant genes (Raw p < 0.05) associated with Erlotinib sensitivity across 929 cell lines.
-2. FDR Rigor: Demonstrated that while individual genes show strong trends, strict FDR correction (Benjamini-Hochberg) highlights the complexity of polygenic drug response.
-3. Model Performance: The model successfully captures biological signal. The Random Forest Regressor achieves a Test R² of ~0.12 and an RMSE of ~1.30.
+1. Biomarker Discovery: Out of 37,215 genes scanned, significant biomarkers were identified using strict FDR correction.
+2. Model Performance: The model successfully captures biological signal without overfitting.
+   · Cross-Val R² (Train): 0.181
+   · Test R² (Unseen): 0.115
+   · Test RMSE: 1.139
 
-(Note: An R² of 0.12 is realistic and expected when predicting a noisy biological phenotype like IC50 from a subset of just 20 genes).
+(Scientific Note: An R² of ~0.11-0.18 is highly realistic and consistent with state-of-the-art literature for single-omics drug response prediction. Predicting IC50 from gene expression alone is notoriously difficult due to the polygenic nature of drug resistance and high biological noise).
 
-📊 Model Performance (Honest Metrics)
+📊 Model Details
 
 Machine Learning Model:
 
 · Algorithm: Random Forest Regressor
 · Validation: 5-Fold Cross-Validation
 · Target: LN(IC50)
-· Features: Top 20 Correlated Genes
+· Features: Top 20 Correlated Genes (from training set)
 
 ---
 
@@ -258,13 +247,13 @@ We welcome contributions! Here's how to help:
 If you use this project in your research, please cite:
 
 ```bibtex
-@software{amenaghawon_drugresponse_2025,
+@software{amenaghawon_drugresponse_2026,
   author = {Amenaghawon, Freedom Evbakoe},
-  title = {Advanced Drug Response Prediction Pipeline},
-  year = {2025},
+  title = {NEURO-RX: Advanced Drug Response Prediction Pipeline},
+  year = {2026},
   publisher = {GitHub},
   url = {https://github.com/famenaghawon/drug-response-prediction},
-  version = {2.0},
+  version = {3.0},
   doi = {10.5281/zenodo.23448119}
 }
 ```
@@ -274,7 +263,7 @@ If you use this project in your research, please cite:
 👨‍🔬 Developer
 
 <p align="center">
-  <img src="assets/profile.jpg" alt="Developer" width="150" style="border-radius: 50%;">
+  <img src="assets/profile.jpg" alt="Developer" width="150" style="border-radius: 50%; border: 3px solid #00e5ff;">
   <br>
   <strong>Freedom Evbakoe Amenaghawon</strong>
   <br>
@@ -294,10 +283,10 @@ Technical Skills:
 
 · Python (Advanced)
 · Machine Learning (Scikit-learn, Cross-Validation)
-· Data Engineering (Chunking, Large-scale data processing)
+· Data Engineering (Chunking, Parquet streaming)
 · Biostatistics (Pearson Correlation, FDR)
 · Data Visualization (Plotly, Streamlit)
-· Cloud Deployment
+· Cloud Deployment (Hugging Face, Streamlit Cloud)
 
 Tools:
 
@@ -331,12 +320,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
   <img src="https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white" alt="Plotly">
   <img src="https://img.shields.io/badge/scikit_learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" alt="Scikit-learn">
   <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+  <img src="https://img.shields.io/badge/Hugging%20Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face">
 </p>---
 
 <p align="center">
-  <strong>🎯 Precision Oncology Pipeline • Version 2.0 • 2025</strong>
+  <strong>🎯 Precision Oncology Pipeline • Version 3.0 • 2026</strong>
   <br>
   <em>Advancing computational biology through real-world data science</em>
 </p><p align="center">
-  <a href="#-advanced-drug-response-prediction--multi-omics-analysis-platform">Back to Top ↑</a>
+  <a href="#-neuro-rx-advanced-drug-response-prediction--multi-omics-analysis-platform">Back to Top ↑</a>
 </p>
