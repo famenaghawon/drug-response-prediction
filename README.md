@@ -188,7 +188,7 @@ This project demonstrates computational approaches for:
       <td>Building robust predictors that handle high-dimensional biological noise</td>
     </tr>
   </table>
-</div>---
+</div>
 
 📈 Results & Insights (Honest Metrics)
 
@@ -321,7 +321,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
   <img src="https://img.shields.io/badge/scikit_learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" alt="Scikit-learn">
   <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
   <img src="https://img.shields.io/badge/Hugging%20Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face">
-</p>---
+</p>
 
 <p align="center">
   <strong>🎯 Precision Oncology Pipeline • Version 3.0 • 2026</strong>
