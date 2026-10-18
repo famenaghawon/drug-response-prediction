@@ -1,51 +1,58 @@
-﻿---
+﻿```markdown
+# 💊 Advanced Drug Response Prediction & Multi-Omics Analysis Platform
 
-💊 Advanced Drug Response Prediction & Multi-Omics Analysis Platform
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.28.0-red.svg)](https://streamlit.io)
+[![Plotly](https://img.shields.io/badge/Plotly-Interactive-orange.svg)](https://plotly.com)
+[![Machine Learning](https://img.shields.io/badge/ML-Scikit--learn-yellow.svg)](https://scikit-learn.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Deployment](https://img.shields.io/badge/Deployed-Streamlit%20Cloud-purple.svg)](https://drug-response-prediction.streamlit.app)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Click_Here-FF4B4B?style=for-the-badge)](https://drug-response-prediction.streamlit.app)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23448119.svg)](https://doi.org/10.5281/zenodo.23448119)
 
-https://img.shields.io/badge/Python-3.11-blue.svg
-https://img.shields.io/badge/Streamlit-1.28.0-red.svg
-https://img.shields.io/badge/Plotly-Interactive-orange.svg
-https://img.shields.io/badge/ML-Scikit--learn-yellow.svg
-https://img.shields.io/badge/License-MIT-green.svg
-https://img.shields.io/badge/Deployed-Streamlit%20Cloud-purple.svg
-https://img.shields.io/badge/🌐_Live_Demo-Click_Here-FF4B4B?style=for-the-badge
-
-🎯 Project Overview
+## 🎯 Project Overview
 
 <p align="center">
   <img src="https://cdn-icons-png.flaticon.com/512/2771/2771778.png" width="120" alt="Precision Medicine">
   <br>
   <em>A production-grade computational biology dashboard for precision oncology</em>
-</p>This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates real multi-omics data from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with rigorous statistical testing (FDR) and machine learning to predict drug sensitivity (IC50) across hundreds of cancer cell lines.
+</p>
 
-Unlike standard tutorials, this project demonstrates the ability to handle large-scale, real-world data (a raw 6GB RNA-seq matrix) and apply rigorous statistical methodologies to extract biological meaning.
+This platform is a sophisticated, end-to-end bioinformatics pipeline and interactive dashboard. It integrates **real multi-omics data** from the Genomics of Drug Sensitivity in Cancer (GDSC2) dataset with **rigorous statistical testing (FDR)** and **machine learning** to predict drug sensitivity (IC50) across hundreds of cancer cell lines. 
+
+Unlike standard tutorials, this project demonstrates the ability to handle **large-scale, real-world data** (a raw 6GB RNA-seq matrix) and apply rigorous statistical methodologies to extract biological meaning.
 
 ---
 
-🚀 Live Demo
+## 🚀 Live Demo
 
 <p align="center">
   <a href="https://drug-response-prediction.streamlit.app">
     <img src="https://img.shields.io/badge/🌐_Live_Demo-Click_Here-FF4B4B?style=for-the-badge&logo=streamlit" alt="Live Demo">
   </a>
-</p>Live App: https://drug-response-prediction.streamlit.app
+</p>
+
+Live App: [https://drug-response-prediction.streamlit.app](https://drug-response-prediction.streamlit.app)
 
 <p align="center">
   <img src="assets/dashboard.png" alt="Dashboard Screenshot" width="800">
   <br>
   <em>Interactive dashboard with real GDSC data</em>
-</p>---
+</p>
 
-📊 Interactive Visualizations
+---
 
-🔬 Multi-Dimensional Analysis
+## 📊 Interactive Visualizations
 
-Visualization Purpose Key Insight
-<img src="assets/volcano.png" width="300"> Biomarker Discovery Identifies significant genes using Pearson correlation with capped Y-axis for visual clarity.
-<img src="assets/dose.png" width="300"> Drug Efficacy Displays the real LN(IC50) distribution across 900+ cell lines for selected EGFR inhibitors.
-<img src="assets/ml.png" width="300"> Predictive Modeling Interactive Random Forest simulator showing Predicted vs. Actual IC50 with error margins.
+### 🔬 Multi-Dimensional Analysis
 
-🎯 Key Features
+| Visualization | Purpose | Key Insight |
+|--------------|---------|-------------|
+| <img src="assets/volcano.png" width="250"> | Biomarker Discovery | Identifies significant genes using Pearson correlation with capped Y-axis for visual clarity. |
+| <img src="assets/dose.png" width="250"> | Drug Efficacy | Displays the real LN(IC50) distribution across 900+ cell lines for selected EGFR inhibitors. |
+| <img src="assets/ml.png" width="250"> | Predictive Modeling | Interactive Random Forest simulator showing Predicted vs. Actual IC50 with error margins. |
+
+### 🎯 Key Features
 
 <div align="center">
   <table>
@@ -73,13 +80,15 @@ Visualization Purpose Key Insight
       </td>
     </tr>
   </table>
-</div>---
+</div>
 
-🛠 Technical Implementation
+---
 
-🔬 Real Data Integration & Pipeline
+## 🛠 Technical Implementation
 
-This project does not use synthetic placeholders. It connects directly to the GDSC2 dataset (Genomics of Drug Sensitivity in Cancer).
+### 🔬 Real Data Integration & Pipeline
+
+This project does not use synthetic placeholders. It connects directly to the **GDSC2** dataset (Genomics of Drug Sensitivity in Cancer).
 
 ```python
 # The pipeline automatically handles missing data and formats
@@ -257,7 +266,7 @@ If you use this project in your research, please cite:
   publisher = {GitHub},
   url = {https://github.com/famenaghawon/drug-response-prediction},
   version = {2.0},
-  doi = {10.5281/zenodo.xxxxxxx}
+  doi = {10.5281/zenodo.23448119}
 }
 ```
 
@@ -332,3 +341,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 </p><p align="center">
   <a href="#-advanced-drug-response-prediction--multi-omics-analysis-platform">Back to Top ↑</a>
 </p>
+```
